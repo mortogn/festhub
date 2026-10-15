@@ -1,0 +1,36 @@
+import {
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { eventsTable } from "./events";
+import { studentsTable } from "./users";
+import { teamsTable } from "./teams";
+
+export const participantsTable = pgTable(
+  "participants",
+  {
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => studentsTable.userId),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => eventsTable.id),
+
+    checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+
+    teamId: uuid("team_id").references(() => teamsTable.id),
+
+    registeredAt: timestamp("registered_at", {
+      withTimezone: true,
+    }).defaultNow(),
+    registrationStatus: text("registration_status", {
+      enum: ["pending", "accepted", "rejected"],
+    })
+      .notNull()
+      .default("pending"),
+  },
+  (table) => [primaryKey({ columns: [table.studentId, table.eventId] })],
+);

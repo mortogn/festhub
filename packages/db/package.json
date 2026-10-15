@@ -3,20 +3,31 @@
   "version": "1.0.0",
   "description": "",
   "private": true,
-  "main": "index.js",
+  "types": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "drizzle-kit migrate"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "dotenv": "^18.0.7",
     "drizzle-orm": "1.0.0-rc.4",
     "pg": "^8.23.1"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "@types/pg": "^8.23.1",
-    "drizzle-kit": "1.0.0-rc.4"
+    "drizzle-kit": "1.0.0-rc.4",
+    "typescript": "^7.0.2"
   }
 }
