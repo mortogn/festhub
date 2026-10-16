@@ -3,7 +3,7 @@ packages:
   - "packages/*"
 
 allowBuilds:
-  bcrypt: set this to true or false
+  bcrypt: true
   esbuild: true
   sharp: false
   unrs-resolver: false

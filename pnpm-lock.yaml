@@ -65,6 +65,9 @@ importers:
       dayjs:
         specifier: ^1.11.23
         version: 1.11.23
+      dotenv:
+        specifier: ^18.0.7
+        version: 18.0.7
       drizzle-orm:
         specifier: 1.0.0-rc.4
         version: 1.0.0-rc.4(@types/pg@8.23.1)(pg@8.23.1)(zod@4.6.7)

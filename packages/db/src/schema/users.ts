@@ -27,8 +27,8 @@ export const studentsTable = pgTable("students", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => usersTable.id),
-  studentId: integer("student_id").notNull().unique(),
-  batch: integer("batch").notNull(),
+  studentId: text("student_id").notNull().unique(),
+  batch: text("batch").notNull(),
   department: text("department").notNull(),
   is_hsc: boolean("is_hsc").notNull().default(false),
 });
@@ -37,7 +37,7 @@ export const teachersTable = pgTable("teachers", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => usersTable.id),
-  teacherId: integer("teacher_id").notNull().unique(),
+  teacherId: text("teacher_id").notNull().unique(),
   department: text("department").notNull(),
 });
 

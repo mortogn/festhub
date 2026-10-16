@@ -9,14 +9,14 @@ const baseSignUpSchema = z.object({
 
 const studentSignUpSchema = baseSignUpSchema.extend({
   role: z.literal("student"),
-  studentId: z.number(),
-  batch: z.number(),
+  studentId: z.string(),
+  batch: z.string(),
   is_hsc: z.boolean().default(true),
 });
 
 const teacherSignUpSchema = baseSignUpSchema.extend({
   role: z.literal("teacher"),
-  teacherId: z.number(),
+  teacherId: z.string(),
 });
 
 const signUpSchema = z.discriminatedUnion("role", [

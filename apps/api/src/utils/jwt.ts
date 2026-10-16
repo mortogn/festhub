@@ -19,7 +19,7 @@ function generateAccessToken(
 ): Promise<string> {
   const secretKey = process.env.ACCESS_TOKEN_SECRET;
   if (!secretKey) {
-    throw new Error("JWT secret key is not defined");
+    throw new Error("ACCESS_TOKEN_SECRET env variable is not defined");
   }
 
   const finalPayload: Omit<JWTPayload, "familyId" | "jid"> = {
@@ -37,7 +37,7 @@ function generateRefreshToken(
 ): Promise<string> {
   const secretKey = process.env.REFRESH_TOKEN_SECRET;
   if (!secretKey) {
-    throw new Error("JWT secret key is not defined");
+    throw new Error("REFRESH_TOKEN_SECRET env variable is not defined");
   }
 
   const finalPayload: JWTPayload = {
