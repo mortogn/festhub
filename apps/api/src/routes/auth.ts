@@ -231,6 +231,24 @@ const app = new Hono()
     }
   })
   .post("/sign-out", async (c) => {
+    const rfToken = getCookie(c, "rf_token");
+
+    if (rfToken) {
+      try {
+        const payload = await verifyRefreshToken(rfToken);
+
+        await db
+          .update(refreshTokensTable)
+          .set({ revokedAt: new Date() })
+          .where(
+            and(
+              eq(refreshTokensTable.familyId, payload.familyId),
+              isNull(refreshTokensTable.revokedAt),
+            ),
+          );
+      } catch {}
+    }
+
     deleteCookie(c, "ac_token", {
       path: "/",
       secure: process.env.NODE_ENV === "production",
