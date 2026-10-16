@@ -22,10 +22,16 @@ import {
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import dayjs from "dayjs";
 import { success } from "zod";
+import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 
 async function generateTokenAndSetCookies(
   c: Context,
-  payload: { sub: string; role: string; jid: string; familyId: string },
+  payload: {
+    sub: string;
+    role: JWTPayload["role"];
+    jid: string;
+    familyId: string;
+  },
 ) {
   const [acToken, rfToken] = await Promise.allSettled([
     generateAccessToken({
@@ -114,9 +120,10 @@ const app = new Hono()
       });
     } catch (err) {
       if (err instanceof HTTPException) throw err;
-      throw new HTTPException(500, {
-        message: "Internal server error while signing in",
-      });
+      throw new InternalServerErrorException(
+        "Error occured signing you in",
+        err,
+      );
     }
 
     return c.json({
@@ -172,9 +179,7 @@ const app = new Hono()
           .returning();
 
         if (!newUser) {
-          throw new HTTPException(500, {
-            message: "Failed to create user",
-          });
+          throw new InternalServerErrorException("Failed to create a user");
         }
 
         if (input.role == "teacher") {
@@ -225,9 +230,7 @@ const app = new Hono()
         throw err;
       }
 
-      throw new HTTPException(500, {
-        message: "Failed to create user",
-      });
+      throw new InternalServerErrorException("Failed to create a user", err);
     }
   })
   .post("/sign-out", async (c) => {
