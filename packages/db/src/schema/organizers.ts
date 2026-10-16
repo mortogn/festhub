@@ -1,6 +1,6 @@
 import { pgTable, primaryKey, timestamp, uuid } from "drizzle-orm/pg-core";
-import { teachersTable } from "./users";
-import { eventsTable } from "./events";
+import { teachersTable } from "./users.js";
+import { eventsTable } from "./events.js";
 
 export const organizersTable = pgTable(
   "organizers",

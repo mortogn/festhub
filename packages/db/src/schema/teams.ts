@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
-import { studentsTable } from "./users";
-import { eventsTable } from "./events";
+import { studentsTable } from "./users.js";
+import { eventsTable } from "./events.js";
 
 export const teamsTable = pgTable("teams", {
   id: uuid("id").primaryKey().defaultRandom(),

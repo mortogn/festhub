@@ -5,8 +5,8 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { studentsTable } from "./users";
-import { eventsTable } from "./events";
+import { studentsTable } from "./users.js";
+import { eventsTable } from "./events.js";
 
 export const volunteersTable = pgTable(
   "volunteers",
