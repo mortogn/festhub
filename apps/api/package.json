@@ -12,12 +12,18 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@festhub/db": "workspace:*",
+    "@festhub/shared": "workspace:*",
     "@hono/node-server": "^2.1.5",
     "@hono/zod-validator": "^0.9.1",
+    "bcrypt": "^6.0.0",
+    "dayjs": "^1.11.23",
+    "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.13.13",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }

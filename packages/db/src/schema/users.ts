@@ -9,6 +9,7 @@ import {
 
 export const usersTable = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
+  name: text("name").notNull(),
   email: text().notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: ["student", "teacher", "admin"] }).notNull(),
@@ -39,3 +40,5 @@ export const teachersTable = pgTable("teachers", {
   teacherId: integer("teacher_id").notNull().unique(),
   department: text("department").notNull(),
 });
+
+export type UserSelect = typeof usersTable.$inferSelect;
