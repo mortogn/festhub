@@ -16,26 +16,26 @@ export const eventsTable = pgTable("events", {
   maxParticipants: integer("max_participants"),
   volunteerRegistration: text("volunteer_registration", {
     enum: ["open", "closed"],
-  }).notNull(),
+  }),
 
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
 
   registrationOpensAt: timestamp("registration_opens_at", {
     withTimezone: true,
-  }).notNull(),
+  }),
   registrationClosesAt: timestamp("registration_closes_at", {
     withTimezone: true,
-  }).notNull(),
+  }),
 
   volunteerStartsAt: timestamp("volunteer_starts_at", {
     withTimezone: true,
-  }).notNull(),
+  }),
   volunteerEndsAt: timestamp("volunteer_ends_at", {
     withTimezone: true,
-  }).notNull(),
+  }),
   maxVolunteers: integer("max_volunteers"),
-  isActive: boolean("is_active").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(false),
 
   venueId: uuid("venue_id").references(() => venuesTable.id),
 

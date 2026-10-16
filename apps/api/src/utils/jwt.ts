@@ -1,3 +1,4 @@
+import { UserSelect } from "@festhub/db/schema";
 import { HTTPException } from "hono/http-exception";
 import { sign, verify } from "hono/jwt";
 
@@ -7,7 +8,7 @@ type JWTPayload = {
   jid: string;
   familyId: string;
   sub: string;
-  role: string;
+  role: UserSelect["role"];
   iss: string;
   exp: number;
   iat: number;
