@@ -9,7 +9,7 @@ import { db } from "@festhub/db";
 import { eventsTable, venuesTable } from "@festhub/db/schema";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import { enforceAuthMiddleware } from "../middlewares/enforce-auth-middleware.js";
-import { and, desc, eq, notExists, lt, gt, ne } from "drizzle-orm";
+import { and, desc, eq, lt, gt, ne } from "drizzle-orm";
 import z from "zod";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { HTTPException } from "hono/http-exception";
