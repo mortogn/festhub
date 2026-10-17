@@ -1,13 +1,16 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { logger } from "hono/logger";
-import eventsRoutes from "./routes/events.js";
-import authRoutes from "./routes/auth.js";
 import { authMiddleware } from "./middlewares/auth-middleware.js";
 import { JWTPayload } from "./utils/jwt.js";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { HTTPException } from "hono/http-exception";
+
+import eventsRoutes from "./routes/events.js";
+import authRoutes from "./routes/auth.js";
+import studentsRoute from "./routes/students.js";
+import volunteersRoute from "./routes/volunteers.js";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -31,6 +34,8 @@ const app = new Hono<{ Variables: Variables }>()
   .use("*", authMiddleware) // Auth Middleware only checks and includes user the request but does not enforce it
   .route("/auth", authRoutes)
   .route("/events", eventsRoutes)
+  .route("/students", studentsRoute)
+  .route("/volunteers", volunteersRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {

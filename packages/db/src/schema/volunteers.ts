@@ -5,7 +5,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { studentsTable } from "./users.js";
+import { studentsTable, usersTable } from "./users.js";
 import { eventsTable } from "./events.js";
 
 export const volunteersTable = pgTable(
@@ -34,6 +34,7 @@ export const volunteersTable = pgTable(
     invitationSentAt: timestamp("invitation_sent_at", { withTimezone: true }),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    invitedById: uuid("invited_by_id").references(() => usersTable.id),
   },
   (table) => [primaryKey({ columns: [table.studentId, table.eventId] })],
 );

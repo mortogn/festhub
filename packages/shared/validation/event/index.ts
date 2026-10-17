@@ -26,7 +26,3 @@ export const updateEventSchema = createEventSchema
     (obj) => !Object.values(obj).every((val) => val === undefined),
     "Entire update object is empty",
   );
-
-export const addVolunteerSchema = z.object({
-  studentId: z.uuid(),
-});
