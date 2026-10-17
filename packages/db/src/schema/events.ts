@@ -52,3 +52,5 @@ export const eventsTable = pgTable("events", {
     .defaultNow()
     .$onUpdateFn(() => new Date()),
 });
+
+export type EventSelect = typeof eventsTable.$inferSelect;

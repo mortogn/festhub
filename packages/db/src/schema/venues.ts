@@ -17,3 +17,5 @@ export const venuesTable = pgTable("venues", {
     .defaultNow()
     .$onUpdateFn(() => new Date()),
 });
+
+export type VenueSelect = typeof venuesTable.$inferSelect;

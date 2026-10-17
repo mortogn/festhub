@@ -1,5 +1,10 @@
 import { db } from "@festhub/db";
-import { eventsTable, venuesTable } from "@festhub/db/schema";
+import {
+  EventSelect,
+  eventsTable,
+  VenueSelect,
+  venuesTable,
+} from "@festhub/db/schema";
 import {
   createVenueSchema,
   updateVenueSchema,
@@ -11,6 +16,7 @@ import { HTTPException } from "hono/http-exception";
 import { enforceAuthMiddleware } from "../middlewares/enforce-auth-middleware.js";
 import { and, desc, eq, gt, lt, notExists } from "drizzle-orm";
 import z from "zod";
+import { map } from "zod/v3";
 
 const app = new Hono()
   .post(
@@ -95,25 +101,47 @@ const app = new Hono()
     async (c) => {
       const query = c.req.valid("query");
 
-      const venues = await db
-        .select()
+      const rows = await db
+        .select({
+          venue: venuesTable,
+          blockingEvent: {
+            id: eventsTable.id,
+            title: eventsTable.title,
+          },
+        })
         .from(venuesTable)
-        .where(
-          notExists(
-            db
-              .select({ id: eventsTable.id })
-              .from(eventsTable)
-              .where(
-                and(
-                  eq(eventsTable.venueId, venuesTable.id),
-                  lt(eventsTable.startsAt, query.endsAt),
-                  gt(eventsTable.endsAt, query.startsAt),
-                ),
-              ),
+        .leftJoin(
+          eventsTable,
+          and(
+            eq(eventsTable.venueId, venuesTable.id),
+            lt(eventsTable.startsAt, query.endsAt),
+            gt(eventsTable.endsAt, query.startsAt),
           ),
         );
 
-      return c.json(venues);
+      const venueMap = new Map<
+        VenueSelect["id"],
+        VenueSelect & {
+          isAvailable: boolean;
+          blockingEvents: Pick<EventSelect, "id" | "title">[];
+        }
+      >();
+
+      rows.forEach(({ venue, blockingEvent }) => {
+        let item = venueMap.get(venue.id);
+
+        if (!item) {
+          item = { ...venue, isAvailable: true, blockingEvents: [] };
+          venueMap.set(item.id, item);
+        }
+
+        if (blockingEvent) {
+          item.isAvailable = false;
+          item.blockingEvents.push(blockingEvent);
+        }
+      });
+
+      return c.json([...venueMap.values()]);
     },
   );
 
