@@ -29,8 +29,8 @@ export type Variables = {
 const app = new Hono<{ Variables: Variables }>()
   .use(logger())
   .use("*", authMiddleware) // Auth Middleware only checks and includes user the request but does not enforce it
-  .route("/events", eventsRoutes)
   .route("/auth", authRoutes)
+  .route("/events", eventsRoutes)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {
@@ -44,6 +44,8 @@ app.onError((err, c) => {
       err.status,
     );
   }
+
+  console.error(err);
 
   return c.json(
     {

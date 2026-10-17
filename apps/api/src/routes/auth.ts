@@ -23,6 +23,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import dayjs from "dayjs";
 import { success } from "zod";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
+import { BadRequestException } from "../exceptions/bad-request-exception.js";
 
 async function generateTokenAndSetCookies(
   c: Context,
@@ -143,9 +144,7 @@ const app = new Hono()
           .where(eq(usersTable.email, input.email));
 
         if (existingUser.length > 0) {
-          throw new HTTPException(400, {
-            message: "User already exists",
-          });
+          throw new BadRequestException("User already exists");
         }
 
         let role: "student" | "teacher" = "student";
@@ -157,10 +156,9 @@ const app = new Hono()
             .where(eq(teacherInvitesTable.email, input.email));
 
           if (!teacher || teacher.acceptedAt) {
-            throw new HTTPException(400, {
-              message:
-                "A valid invitation is required to sign up as a teacher.",
-            });
+            throw new BadRequestException(
+              "A valid invitation is required to sign up as a teacher.",
+            );
           }
 
           role = "teacher";
@@ -212,8 +210,7 @@ const app = new Hono()
         })
         .returning({ jid: refreshTokensTable.jid });
 
-      if (!token)
-        throw new HTTPException(500, { message: "Internal server error" });
+      if (!token) throw new InternalServerErrorException();
 
       await generateTokenAndSetCookies(c, {
         sub: newUser.id,
