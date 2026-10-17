@@ -4,16 +4,16 @@ export const createEventSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   type: z.enum(["workshop", "seminar", "contest"]),
-  startsAt: z.date(),
-  endsAt: z.date(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
 });
 
 export const updateEventSchema = createEventSchema
   .extend({
-    registrationOpensAt: z.date().optional(),
-    registrationClosesAt: z.date().optional(),
-    volunteerStartsAt: z.date().optional(),
-    volunteerEndsAt: z.date().optional(),
+    registrationOpensAt: z.coerce.date().optional(),
+    registrationClosesAt: z.coerce.date().optional(),
+    volunteerStartsAt: z.coerce.date().optional(),
+    volunteerEndsAt: z.coerce.date().optional(),
     maxVolunteers: z.number().optional(),
     isActive: z.boolean().optional(),
     teamBased: z.boolean().optional(),
