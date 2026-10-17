@@ -6,13 +6,14 @@ import {
 } from "@festhub/shared/validation";
 import { Variables } from "../server.js";
 import { db } from "@festhub/db";
-import { eventsTable } from "@festhub/db/schema";
+import { eventsTable, venuesTable } from "@festhub/db/schema";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import { enforceAuthMiddleware } from "../middlewares/enforce-auth-middleware.js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notExists, lt, gt, ne } from "drizzle-orm";
 import z from "zod";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { HTTPException } from "hono/http-exception";
+import { BadRequestException } from "../exceptions/bad-request-exception.js";
 
 const app = new Hono<{ Variables: Variables }>()
   .post(
@@ -131,6 +132,61 @@ const app = new Hono<{ Variables: Variables }>()
       if (err instanceof HTTPException) throw err;
       throw new InternalServerErrorException("Internal Server Error", err);
     }
-  });
+  })
+  .patch(
+    "/:eventId/venue",
+    enforceAuthMiddleware(["teacher", "admin"]),
+    zValidator("param", z.object({ eventId: z.uuid() })),
+    zValidator("json", z.object({ venueId: z.uuid() })),
+    async (c) => {
+      const { venueId } = c.req.valid("json");
+      const { eventId } = c.req.valid("param");
+
+      const venue = await db.transaction(async (tx) => {
+        const [event] = await tx
+          .select()
+          .from(eventsTable)
+          .where(eq(eventsTable.id, eventId))
+          .for("update");
+
+        if (!event) throw new BadRequestException("Invalid eventId provided");
+
+        const [venue] = await tx
+          .select()
+          .from(venuesTable)
+          .where(eq(venuesTable.id, venueId))
+          .for("update");
+
+        if (!venue) throw new BadRequestException("Invalid venueId provided");
+
+        const [conflict] = await tx
+          .select({ id: eventsTable.id })
+          .from(eventsTable)
+          .where(
+            and(
+              eq(eventsTable.venueId, venueId),
+              ne(eventsTable.id, eventId),
+              lt(eventsTable.startsAt, event.endsAt),
+              gt(eventsTable.endsAt, event.startsAt),
+            ),
+          )
+          .limit(1);
+
+        if (conflict)
+          throw new BadRequestException(
+            "The venue is not available and can not be selected for this event",
+          );
+
+        await tx
+          .update(eventsTable)
+          .set({ venueId: venue.id })
+          .where(eq(eventsTable.id, eventId));
+
+        return venue;
+      });
+
+      return c.json(venue);
+    },
+  );
 
 export default app;
