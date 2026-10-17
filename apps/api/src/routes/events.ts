@@ -65,6 +65,7 @@ const app = new Hono<{ Variables: Variables }>()
           maxTeamSize: body.maxTeamSize,
           minTeamSize: body.minTeamSize,
           maxTeams: body.maxTeams,
+          volunteerRegistration: body.volunteerRegistration,
         })
         .where(eq(eventsTable.id, param.id))
         .returning({ id: eventsTable.id });
