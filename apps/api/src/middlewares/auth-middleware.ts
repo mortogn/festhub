@@ -7,6 +7,8 @@ import { Variables } from "../server.js";
 export const authMiddleware = createMiddleware<{
   Variables: Variables;
 }>(async (c, next) => {
+  c.set("user", { authenticated: false });
+
   try {
     const ac_token = getCookie(c, "ac_token");
 
@@ -18,10 +20,8 @@ export const authMiddleware = createMiddleware<{
         role: payload.role,
         authenticated: true,
       });
-    } else {
-      c.set("user", { authenticated: false });
     }
-
-    await next();
   } catch {}
+
+  await next();
 });
