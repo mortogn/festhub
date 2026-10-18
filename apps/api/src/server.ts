@@ -12,6 +12,8 @@ import authRoutes from "./routes/auth.js";
 import studentsRoute from "./routes/students.js";
 import volunteersRoute from "./routes/volunteers.js";
 import venuesRoute from "./routes/venues.js";
+import teachersRoute from "./routes/teachers.js";
+import organizersRoute from "./routes/organizer.js";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -38,6 +40,8 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/students", studentsRoute)
   .route("/volunteers", volunteersRoute)
   .route("/venues", venuesRoute)
+  .route("/teachers", teachersRoute)
+  .route("/organizers", organizersRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {
@@ -64,5 +68,7 @@ app.onError((err, c) => {
 
 serve({
   fetch: app.fetch,
-  port: 8080,
+  port: Number(process.env.PORT) || 8080,
 });
+
+export type AppType = typeof app;

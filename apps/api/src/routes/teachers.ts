@@ -135,4 +135,6 @@ export const app = new Hono()
     },
   );
 
+export default app;
+
 // cat wrote this:  hjf

@@ -93,3 +93,5 @@ export const app = new Hono()
       return c.json(organizers);
     },
   );
+
+export default app;
