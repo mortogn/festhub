@@ -1,5 +1,5 @@
 import { pgTable, primaryKey, timestamp, uuid } from "drizzle-orm/pg-core";
-import { teachersTable } from "./users.js";
+import { teachersTable, usersTable } from "./users.js";
 import { eventsTable } from "./events.js";
 
 export const organizersTable = pgTable(
@@ -13,6 +13,7 @@ export const organizersTable = pgTable(
       .references(() => eventsTable.id),
 
     assignedAt: timestamp("assigned_at", { withTimezone: true }).defaultNow(),
+    assignedById: uuid("assigned_by_id").references(() => usersTable.id),
   },
   (table) => [primaryKey({ columns: [table.teacherId, table.eventId] })],
 );

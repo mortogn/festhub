@@ -42,3 +42,5 @@ export const teachersTable = pgTable("teachers", {
 });
 
 export type UserSelect = typeof usersTable.$inferSelect;
+export type TeacherSelect = typeof teachersTable.$inferSelect;
+export type StudentSelect = typeof studentsTable.$inferSelect;

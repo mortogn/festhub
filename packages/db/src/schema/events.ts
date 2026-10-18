@@ -44,6 +44,9 @@ export const eventsTable = pgTable("events", {
   minTeamSize: integer("min_team_size"),
   maxTeams: integer("max_teams"),
 
+  thumbnail: text("thumbnail"),
+  banner: text("banner"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
