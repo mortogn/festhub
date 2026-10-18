@@ -12,10 +12,11 @@ import {
   UserSelect,
   usersTable,
 } from "@festhub/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import { enforceAuthMiddleware } from "../middlewares/enforce-auth-middleware.js";
+import z from "zod";
 
 export const app = new Hono()
   .post(
@@ -75,9 +76,12 @@ export const app = new Hono()
     return c.json(teachers);
   })
   .get(
-    "/:teacherId",
+    "/:id",
     enforceAuthMiddleware(["admin", "teacher"]),
+    zValidator("param", z.object({ id: z.uuid() })),
     async (c) => {
+      const { id } = c.req.valid("param");
+
       const rows = await db
         .select({
           user: usersTable,
@@ -86,11 +90,12 @@ export const app = new Hono()
         })
         .from(teachersTable)
         .innerJoin(usersTable, eq(usersTable.id, teachersTable.userId))
-        .innerJoin(
+        .where(or(eq(usersTable.id, id), eq(teachersTable.teacherId, id)))
+        .leftJoin(
           organizersTable,
           eq(organizersTable.teacherId, teachersTable.userId),
         )
-        .innerJoin(eventsTable, eq(eventsTable.id, organizersTable.eventId))
+        .leftJoin(eventsTable, eq(eventsTable.id, organizersTable.eventId))
         .orderBy(desc(usersTable.createdAt));
 
       const teacherMap = new Map<
