@@ -14,6 +14,7 @@ import volunteersRoute from "./routes/volunteers.js";
 import venuesRoute from "./routes/venues.js";
 import teachersRoute from "./routes/teachers.js";
 import organizersRoute from "./routes/organizer.js";
+import participantsRoute from "./routes/participants.js";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -42,6 +43,7 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/venues", venuesRoute)
   .route("/teachers", teachersRoute)
   .route("/organizers", organizersRoute)
+  .route("/participants", participantsRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {
