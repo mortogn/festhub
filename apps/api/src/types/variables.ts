@@ -3,7 +3,7 @@ import { JWTPayload } from "../utils/jwt.js";
 export type AuthenticatedUser = {
   id: JWTPayload["sub"];
   role: JWTPayload["role"];
-  authenticated: false;
+  authenticated: true;
 };
 
 export type UnAuthenticatedUser = {
