@@ -50,9 +50,11 @@ const app = new Hono()
   .put(
     "/:id",
     enforceAuthMiddleware(["teacher", "admin"]),
+    zValidator("param", z.object({ id: z.uuid() })),
     zValidator("json", updateVenueSchema),
     async (c) => {
       const body = c.req.valid("json");
+      const { id } = c.req.valid("param");
 
       try {
         const [venue] = await db
@@ -63,6 +65,7 @@ const app = new Hono()
             capacity: body.capacity,
             type: body.type,
           })
+          .where(eq(venuesTable.id, id))
           .returning({ id: venuesTable.id });
 
         if (!venue) throw new InternalServerErrorException();

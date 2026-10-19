@@ -78,7 +78,7 @@ export const app = new Hono()
   .get(
     "/:id",
     enforceAuthMiddleware(["admin", "teacher"]),
-    zValidator("param", z.object({ id: z.uuid() })),
+    zValidator("param", z.object({ id: z.string() })),
     async (c) => {
       const { id } = c.req.valid("param");
 

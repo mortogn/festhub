@@ -31,6 +31,10 @@ export const participantsTable = pgTable(
     })
       .notNull()
       .default("pending"),
+
+    registrationAcceptedAt: timestamp("registration_accepted_at", {
+      withTimezone: true,
+    }),
   },
   (table) => [primaryKey({ columns: [table.studentId, table.eventId] })],
 );

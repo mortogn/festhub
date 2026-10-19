@@ -21,6 +21,7 @@ export const updateEventSchema = createEventSchema
     minTeamSize: z.number().optional(),
     maxTeams: z.number().optional(),
     volunteerRegistration: z.enum(["open", "closed"]).optional(),
+    maxParticipants: z.number().optional(),
   })
   .partial()
   .refine(
