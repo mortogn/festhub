@@ -2,18 +2,25 @@ import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { studentsTable } from "./users.js";
 import { eventsTable } from "./events.js";
 
-export const teamsTable = pgTable("teams", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  leaderId: uuid("leader_id")
-    .notNull()
-    .references(() => studentsTable.userId),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => eventsTable.id),
+export const teamsTable = pgTable(
+  "teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leaderId: uuid("leader_id")
+      .notNull()
+      .references(() => studentsTable.userId),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => eventsTable.id),
 
-  name: text("name").notNull(),
-  status: text("status", { enum: ["accepted", "pending", "rejected"] }),
-});
+    name: text("name").notNull(),
+    status: text("status", { enum: ["accepted", "pending", "rejected"] }),
+    registeredAt: timestamp("registered_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [unique().on(table.eventId, table.name)],
+);
 
 export const teamInvitationsTable = pgTable(
   "team_invitations",

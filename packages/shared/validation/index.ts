@@ -5,3 +5,4 @@ export * from "./volunteers/index.js";
 export * from "./venues.js";
 export * from "./teacher.js";
 export * from "./participants.js";
+export * from "./teams.js";

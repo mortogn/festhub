@@ -89,6 +89,7 @@ const app = new Hono<{ Variables: Variables }>()
         startsAt: eventsTable.startsAt,
         endsAt: eventsTable.endsAt,
         isActive: eventsTable.isActive,
+        volunteerRegistration: eventsTable.volunteerRegistration,
       })
       .from(eventsTable)
       .orderBy(desc(eventsTable.startsAt))
