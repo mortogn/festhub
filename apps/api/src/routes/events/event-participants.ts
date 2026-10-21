@@ -6,7 +6,7 @@ import {
   participantsTable,
 } from "@festhub/db/schema";
 import { zValidator } from "@hono/zod-validator";
-import { eq, and, gt, or, isNotNull } from "drizzle-orm";
+import { eq, and, gt, or, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import z from "zod";
 import { BadRequestException } from "../../exceptions/bad-request-exception.js";
@@ -109,6 +109,7 @@ const app = new Hono()
             and(
               eq(participantsTable.eventId, id),
               eq(participantsTable.studentId, studentId),
+              isNull(participantsTable.teamId),
               or(
                 eq(participantsTable.registrationStatus, "pending"),
                 eq(participantsTable.registrationStatus, "rejected"),

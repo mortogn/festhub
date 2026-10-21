@@ -9,13 +9,15 @@ import {
   studentsTable,
   teamInvitationsTable,
   teamsTable,
+  usersTable,
 } from "@festhub/db/schema";
-import { and, eq, gt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import z from "zod";
 import { ForbiddenException } from "../exceptions/forbidden-exception.js";
+import { lt } from "zod/locales";
 
 const app = new Hono()
   .post(
@@ -26,15 +28,16 @@ const app = new Hono()
       const { studentId, teamId } = c.req.valid("json");
       const user = c.var.user;
 
+      const isUUID = z.uuid().safeParse(studentId).success;
+
       const invite = await db.transaction(async (tx) => {
         const [student] = await tx
           .select()
           .from(studentsTable)
           .where(
-            or(
-              eq(studentsTable.userId, studentId),
-              eq(studentsTable.studentId, studentId),
-            ),
+            isUUID
+              ? eq(studentsTable.userId, studentId)
+              : eq(studentsTable.studentId, studentId),
           );
 
         if (!student)
@@ -43,53 +46,90 @@ const app = new Hono()
           );
 
         const [team] = await tx
-          .select({
-            id: teamsTable.id,
-            eventId: teamsTable.eventId,
-            maxTeamSize: eventsTable.maxTeamSize,
-            totalMember: sql<number>`count(${teamInvitationsTable.id})::int + 1`,
-            leaderId: teamsTable.leaderId,
-          })
+          .select()
           .from(teamsTable)
-          .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
-          .leftJoin(
-            teamInvitationsTable,
-            and(
-              eq(teamInvitationsTable.teamId, teamsTable.id),
-              eq(teamInvitationsTable.status, "accepted"),
-            ),
-          )
           .where(
-            and(eq(teamsTable.id, teamId), gt(eventsTable.endsAt, new Date())),
+            and(eq(teamsTable.id, teamId), isNull(teamsTable.registeredAt)),
           )
-          .groupBy(teamsTable.id, eventsTable.id);
+          .for("update");
 
-        if (!team)
-          throw new BadRequestException(
-            "Team is not valid or the event has ended already",
+        if (!team) throw new BadRequestException("Team not found");
+
+        if (team.leaderId !== user.id)
+          throw new ForbiddenException(
+            "Only team leader can invite other members to the team",
           );
 
-        if (team.leaderId !== user.id) throw new ForbiddenException();
+        const [event] = await tx
+          .select()
+          .from(eventsTable)
+          .where(
+            and(
+              eq(eventsTable.isActive, true),
+              gt(eventsTable.registrationClosesAt, new Date()),
+              eq(eventsTable.id, team.eventId),
+            ),
+          );
 
-        if (team.maxTeamSize && team.totalMember >= team.maxTeamSize)
+        if (!event)
           throw new BadRequestException(
-            "Your team already have maximum number of allowed members",
+            "Event does not exist or the registration has already closed",
+          );
+
+        const totalTeamMembers = await tx.$count(
+          participantsTable,
+          eq(participantsTable.teamId, team.id),
+        );
+
+        const totalTeams = await tx.$count(
+          teamsTable,
+          and(
+            eq(teamsTable.status, "accepted"),
+            eq(teamsTable.eventId, event.id),
+          ),
+        );
+
+        // const [team] = await tx
+        //   .select({
+        //     id: teamsTable.id,
+        //     eventId: teamsTable.eventId,
+        //     maxTeamSize: eventsTable.maxTeamSize,
+        //     totalMember: sql<number>`count(${teamInvitationsTable.id})::int + 1`,
+        //     leaderId: teamsTable.leaderId,
+        //   })
+        //   .from(teamsTable)
+        //   .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
+        //   .leftJoin(
+        //     teamInvitationsTable,
+        //     and(
+        //       eq(teamInvitationsTable.teamId, teamsTable.id),
+        //       eq(teamInvitationsTable.status, "accepted"),
+        //     ),
+        //   )
+        //   .where(
+        //     and(eq(teamsTable.id, teamId), gt(eventsTable.endsAt, new Date())),
+        //   )
+        //   .groupBy(teamsTable.id, eventsTable.id);
+
+        if (event.maxTeamSize && totalTeamMembers >= event.maxTeamSize)
+          throw new BadRequestException(
+            `Your team already have maximum number of allowed members of ${totalTeamMembers}`,
           );
 
         const [alreadyAParticipant] = await tx
           .select()
-          .from(teamInvitationsTable)
-          .innerJoin(teamsTable, eq(teamsTable.id, teamInvitationsTable.teamId))
+          .from(participantsTable)
           .where(
             and(
-              eq(teamInvitationsTable.studentId, student.userId),
-              eq(teamInvitationsTable.status, "accepted"),
-              eq(teamsTable.eventId, team.eventId),
+              eq(participantsTable.studentId, student.userId),
+              eq(participantsTable.eventId, event.id),
             ),
           );
 
         if (alreadyAParticipant)
-          throw new BadRequestException("Student is already part of a team");
+          throw new BadRequestException(
+            "Student is already part of a team for this event",
+          );
 
         const [alreadyInvited] = await tx
           .select({ id: teamInvitationsTable.id })
@@ -104,7 +144,7 @@ const app = new Hono()
 
         if (!!alreadyInvited)
           throw new BadRequestException(
-            "Duplicate team member invitation sent",
+            "Duplicate team member invitation can not be sent",
           );
 
         const [invite] = await tx
@@ -124,10 +164,10 @@ const app = new Hono()
           })
           .returning();
 
+        if (!invite) throw new InternalServerErrorException();
+
         return invite;
       });
-
-      if (!invite) throw new InternalServerErrorException();
 
       return c.json(invite);
     },
@@ -136,15 +176,36 @@ const app = new Hono()
     const user = c.var.user;
 
     const invites = await db
-      .select()
+      .select({
+        id: teamInvitationsTable.id,
+        invitedAt: teamInvitationsTable.invitedAt,
+        teamName: teamsTable.name,
+        teamId: teamsTable.id,
+        status: teamInvitationsTable.status,
+        leader: {
+          studentId: studentsTable.studentId,
+          name: usersTable.name,
+          displayImage: usersTable.displayImage,
+          email: usersTable.email,
+        },
+        event: {
+          title: eventsTable.title,
+          thumbnail: eventsTable.thumbnail,
+          startsAt: eventsTable.startsAt,
+          endsAt: eventsTable.endsAt,
+        },
+      })
       .from(teamInvitationsTable)
-      .innerJoin(
-        studentsTable,
-        eq(studentsTable.userId, teamInvitationsTable.studentId),
-      )
       .innerJoin(teamsTable, eq(teamsTable.id, teamInvitationsTable.teamId))
+      .innerJoin(studentsTable, eq(studentsTable.userId, teamsTable.leaderId))
+      .innerJoin(usersTable, eq(usersTable.id, studentsTable.userId))
       .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
-      .where(eq(teamInvitationsTable.studentId, user.id));
+      .where(
+        and(
+          eq(teamInvitationsTable.studentId, user.id),
+          isNull(teamsTable.registeredAt),
+        ),
+      );
 
     return c.json(invites);
   })
@@ -168,6 +229,7 @@ const app = new Hono()
               eq(teamInvitationsTable.studentId, user.id),
               eq(teamInvitationsTable.id, id),
               eq(teamInvitationsTable.status, "pending"),
+              isNull(teamsTable.registeredAt),
             ),
           );
 
@@ -210,35 +272,33 @@ const app = new Hono()
               "Can not accept as the invitation is not valid",
             );
 
-          const [totalMember] = await tx
-            .select({
-              count: sql<number>`count(*)::int + 1`,
-            })
-            .from(teamInvitationsTable)
-            .where(
-              and(
-                eq(teamInvitationsTable.status, "accepted"),
-                eq(teamInvitationsTable.teamId, invite.teams.id),
-              ),
-            );
+          const totalMember = await tx.$count(
+            participantsTable,
+            eq(participantsTable.teamId, invite.teams.id),
+          );
 
           if (
             totalMember &&
             event.maxTeamSize &&
-            totalMember?.count >= event.maxTeamSize
+            totalMember >= event.maxTeamSize
           )
             throw new BadRequestException(
               "Team already has maximum allowed members",
             );
         }
 
-        const [acceptedInvite] = await tx
+        const [updatedInvite] = await tx
           .update(teamInvitationsTable)
           .set({
             status: action,
             acceptedAt: action === "accepted" ? new Date() : null,
           })
-          .where(eq(teamInvitationsTable.id, invite.team_invitations.id))
+          .where(
+            and(
+              eq(teamInvitationsTable.id, invite.team_invitations.id),
+              eq(teamInvitationsTable.status, "pending"),
+            ),
+          )
           .returning();
 
         if (action === "accepted") {
@@ -254,7 +314,7 @@ const app = new Hono()
           if (!participant) throw new InternalServerErrorException();
         }
 
-        return acceptedInvite;
+        return updatedInvite;
       });
 
       if (!invite) throw new InternalServerErrorException();

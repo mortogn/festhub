@@ -14,7 +14,18 @@ import {
   usersTable,
   volunteersTable,
 } from "@festhub/db/schema";
-import { and, count, desc, eq, gt, lt, or, ne, isNotNull } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  lt,
+  or,
+  ne,
+  isNotNull,
+  isNull,
+} from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
@@ -239,10 +250,10 @@ const app = new Hono<{ Variables: Variables }>()
     },
   )
   .patch(
-    "/invite/:eventId",
+    "/invite",
     enforceAuthMiddleware(["student"]),
     zValidator(
-      "param",
+      "query",
       z.object({
         eventId: z.uuid(),
       }),
@@ -250,7 +261,7 @@ const app = new Hono<{ Variables: Variables }>()
     zValidator("json", z.object({ action: z.enum(["accepted", "rejected"]) })),
     async (c) => {
       const user = c.var.user;
-      const { eventId } = c.req.valid("param");
+      const { eventId } = c.req.valid("query");
       const { action } = c.req.valid("json");
 
       const volunteer = await db.transaction(async (tx) => {
@@ -279,27 +290,39 @@ const app = new Hono<{ Variables: Variables }>()
               eq(volunteersTable.studentId, user.id),
               eq(volunteersTable.inviteStatus, "pending"),
             ),
-          )
-          .for("update");
+          );
 
         if (!invite)
           throw new BadRequestException(
             "The invitation you are looking for is no longer valid",
           );
 
-        if (
-          event.volunteerStartsAt &&
-          event.volunteerEndsAt &&
-          action === "accepted"
-        ) {
-          await throwOnVolunteerConflict(
-            tx,
-            {
-              volunteerStartsAt: event.volunteerStartsAt,
-              volunteerEndsAt: event.volunteerEndsAt,
-            },
-            user.id,
+        if (action === "accepted") {
+          const totalVolunteers = await tx.$count(
+            volunteersTable,
+            and(
+              eq(volunteersTable.eventId, event.id),
+              or(
+                eq(volunteersTable.registrationStatus, "approved"),
+                eq(volunteersTable.inviteStatus, "accepted"),
+              ),
+            ),
           );
+
+          if (event.maxVolunteers && totalVolunteers >= event.maxVolunteers)
+            throw new BadRequestException(
+              "Event already have maximum number of volunteers",
+            );
+
+          if (event.volunteerStartsAt && event.volunteerEndsAt)
+            await throwOnVolunteerConflict(
+              tx,
+              {
+                volunteerStartsAt: event.volunteerStartsAt,
+                volunteerEndsAt: event.volunteerEndsAt,
+              },
+              user.id,
+            );
         }
 
         const [volunteer] = await tx
@@ -326,9 +349,9 @@ const app = new Hono<{ Variables: Variables }>()
     },
   )
   .patch(
-    "/request/:eventId",
+    "/request",
     enforceAuthMiddleware(["teacher", "admin"]),
-    zValidator("param", z.object({ eventId: z.uuid() })),
+    zValidator("query", z.object({ eventId: z.uuid() })),
     zValidator(
       "json",
       z.object({
@@ -337,7 +360,7 @@ const app = new Hono<{ Variables: Variables }>()
       }),
     ),
     async (c) => {
-      const { eventId } = c.req.valid("param");
+      const { eventId } = c.req.valid("query");
       const { action, studentId } = c.req.valid("json");
 
       const volunteer = await db.transaction(async (tx) => {
@@ -378,6 +401,7 @@ const app = new Hono<{ Variables: Variables }>()
             and(
               eq(volunteersTable.studentId, studentId),
               eq(volunteersTable.eventId, eventId),
+              isNotNull(volunteersTable.registeredAt),
               or(
                 ne(volunteersTable.registrationStatus, "approved"),
                 ne(volunteersTable.inviteStatus, "accepted"),
@@ -388,7 +412,7 @@ const app = new Hono<{ Variables: Variables }>()
 
         if (!volunteer)
           throw new BadRequestException(
-            "The volunteer does not exist or is already in accepted group, can not update status",
+            "The volunteer request does not exist or is already in accepted group, can not update status",
           );
 
         return volunteer;

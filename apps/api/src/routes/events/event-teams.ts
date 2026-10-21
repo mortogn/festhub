@@ -18,7 +18,7 @@ import { BadRequestException } from "../../exceptions/bad-request-exception.js";
 const app = new Hono()
   .get(
     "/:id/teams",
-    enforceAuthMiddleware(["teacher"]),
+    enforceAuthMiddleware(["teacher", "admin"]),
     zValidator("param", z.object({ id: z.uuid() })),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -93,7 +93,11 @@ const app = new Hono()
           .select()
           .from(teamsTable)
           .where(
-            and(eq(teamsTable.id, teamId), eq(teamsTable.eventId, eventId)),
+            and(
+              eq(teamsTable.id, teamId),
+              eq(teamsTable.eventId, eventId),
+              isNotNull(teamsTable.registeredAt),
+            ),
           );
 
         if (!team) throw new BadRequestException("Team not found ");
@@ -151,6 +155,14 @@ const app = new Hono()
           throw new BadRequestException(
             "Could not update team status as it has already updated before",
           );
+
+        await tx
+          .update(participantsTable)
+          .set({
+            registrationAcceptedAt: updatedTeam.acceptedAt,
+            registrationStatus: updatedTeam.status ?? undefined,
+          })
+          .where(eq(participantsTable.teamId, updatedTeam.id));
 
         return updatedTeam;
       });
