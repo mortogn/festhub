@@ -11,23 +11,11 @@ import {
   teamsTable,
   usersTable,
 } from "@festhub/db/schema";
-import {
-  and,
-  count,
-  eq,
-  gt,
-  inArray,
-  isNotNull,
-  isNull,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNull, or, lt } from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import z from "zod";
-import teamInvitesRoute from "./team-invites.js";
-import { alias } from "drizzle-orm/pg-core";
 
 const app = new Hono()
   .post(
@@ -240,81 +228,85 @@ const app = new Hono()
       const { id } = c.req.valid("param");
       const user = c.var.user;
 
-      const teamCount = alias(teamsTable, "team_count");
+      const now = new Date();
 
       const submittedTeam = await db.transaction(async (tx) => {
-        const [row] = await tx
-          .select({
-            team: teamsTable,
-            event: eventsTable,
-            totalMembers: sql<number>`count(${teamInvitationsTable.id})::int + 1`,
-            totalTeams: tx.$count(
-              teamCount,
-              and(
-                eq(teamCount.eventId, eventsTable.id),
-                eq(teamCount.status, "accepted"),
-              ),
-            ),
-          })
+        const [team] = await tx
+          .select()
           .from(teamsTable)
-          .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
-          .leftJoin(
-            teamInvitationsTable,
-            and(
-              eq(teamInvitationsTable.teamId, teamsTable.id),
-              eq(teamInvitationsTable.status, "accepted"),
-            ),
-          )
-          .where(
-            and(
-              eq(teamsTable.id, id),
-              eq(teamsTable.leaderId, user.id),
-              gt(eventsTable.registrationClosesAt, new Date()),
-              eq(eventsTable.isActive, true),
-            ),
-          )
-          .groupBy(teamsTable.id, eventsTable.id);
+          .where(and(eq(teamsTable.id, id), eq(teamsTable.leaderId, user.id)))
+          .for("update");
 
-        if (!row) throw new NotFoundException("Team not found");
+        if (!team) throw new BadRequestException("Team not found");
 
-        if (row.team.registeredAt !== null)
+        if (team.registeredAt !== null)
           throw new BadRequestException(
             "You have already submitted your team for this event",
           );
 
-        if (row.event.minTeamSize && row.totalMembers < row.event.minTeamSize)
-          throw new BadRequestException(
-            `You need at least ${row.event.minTeamSize} members in your team to register for this event`,
+        const [event] = await tx
+          .select()
+          .from(eventsTable)
+          .where(
+            and(
+              eq(eventsTable.id, team.eventId),
+              eq(eventsTable.isActive, true),
+              gt(eventsTable.registrationClosesAt, now),
+              lt(eventsTable.registrationOpensAt, now),
+            ),
           );
 
-        if (row.event.maxTeamSize && row.totalMembers > row.event.maxTeamSize)
+        if (!event)
           throw new BadRequestException(
-            `You can have a maximum of ${row.event.maxTeamSize} members in your team`,
+            "Event is not valid or the registration is already closed.",
           );
 
-        if (row.event.maxTeams && row.totalTeams >= row.event.maxTeams)
+        const totalTeamMembers = await tx.$count(
+          participantsTable,
+          eq(participantsTable.teamId, team.id),
+        );
+
+        const totalTeams = await tx.$count(
+          teamsTable,
+          and(
+            eq(teamsTable.eventId, event.id),
+            eq(teamsTable.status, "accepted"),
+          ),
+        );
+
+        if (event.minTeamSize && totalTeamMembers < event.minTeamSize)
           throw new BadRequestException(
-            `The event already has a maximum number of teams allowed: ${row.event.maxTeams}`,
+            `You need at least ${event.minTeamSize} members in your team to register for this event`,
           );
 
-        const [team] = await tx
+        if (event.maxTeamSize && totalTeamMembers > event.maxTeamSize)
+          throw new BadRequestException(
+            `You can have a maximum of ${event.maxTeamSize} members in your team`,
+          );
+
+        if (event.maxTeams && totalTeams >= event.maxTeams)
+          throw new BadRequestException(
+            `The event already has a maximum number of teams allowed: ${event.maxTeams}`,
+          );
+
+        const [submittedTeam] = await tx
           .update(teamsTable)
           .set({ status: "pending", registeredAt: new Date() })
           .where(and(eq(teamsTable.id, id), isNull(teamsTable.registeredAt)))
           .returning();
 
-        if (!team)
+        if (!submittedTeam)
           throw new BadRequestException("Team is possibly already submitted");
 
         await tx
           .update(participantsTable)
           .set({
-            registeredAt: team.registeredAt,
+            registeredAt: submittedTeam.registeredAt,
             registrationStatus: "pending",
           })
           .where(eq(participantsTable.teamId, id));
 
-        return team;
+        return submittedTeam;
       });
 
       return c.json(submittedTeam);
