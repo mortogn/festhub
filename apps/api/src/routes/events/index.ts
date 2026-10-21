@@ -25,6 +25,7 @@ import { BadRequestException } from "../../exceptions/bad-request-exception.js";
 
 import eventVenuesRoute from "./event-venues.js";
 import eventParticipantsRoute from "./event-participants.js";
+import eventTeamsRoute from "./event-teams.js";
 
 const app = new Hono<{ Variables: Variables }>()
   .post(
@@ -148,66 +149,6 @@ const app = new Hono<{ Variables: Variables }>()
   })
   .route("/", eventVenuesRoute)
   .route("/", eventParticipantsRoute)
-  .get(
-    "/:id/teams",
-    enforceAuthMiddleware(["teacher"]),
-    zValidator("param", z.object({ eventId: z.uuid() })),
-    async (c) => {
-      const { eventId } = c.req.valid("param");
-
-      const teams = await db
-        .select({
-          team: teamsTable,
-          member: {
-            id: usersTable.id,
-            email: usersTable.email,
-            displayImage: usersTable.displayImage,
-            department: studentsTable.department,
-            batch: studentsTable.batch,
-            studentId: studentsTable.studentId,
-          },
-        })
-        .from(teamsTable)
-        .leftJoin(
-          participantsTable,
-          eq(participantsTable.teamId, teamsTable.id),
-        )
-        .leftJoin(
-          studentsTable,
-          eq(participantsTable.studentId, studentsTable.userId),
-        )
-        .leftJoin(usersTable, eq(studentsTable.userId, usersTable.id))
-        .where(
-          and(
-            eq(teamsTable.eventId, eventId),
-            isNotNull(teamsTable.registeredAt),
-          ),
-        );
-
-      const teamMap = new Map<
-        TeamSelect["id"],
-        TeamSelect & {
-          members: Array<(typeof teams)[number]["member"]>;
-        }
-      >();
-
-      teams.filter(({ team, member }) => {
-        let item = teamMap.get(team.id);
-
-        if (!item) {
-          item = {
-            ...team,
-            members: [],
-          };
-
-          teamMap.set(team.id, item);
-        }
-
-        if (member) item.members.push(member);
-      });
-
-      return c.json([...teamMap.values()]);
-    },
-  );
+  .route("/", eventTeamsRoute);
 
 export default app;

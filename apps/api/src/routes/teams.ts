@@ -11,12 +11,23 @@ import {
   teamsTable,
   usersTable,
 } from "@festhub/db/schema";
-import { and, count, eq, inArray, or } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
 import z from "zod";
 import teamInvitesRoute from "./team-invites.js";
+import { alias } from "drizzle-orm/pg-core";
 
 const app = new Hono()
   .post(
@@ -145,7 +156,6 @@ const app = new Hono()
       return c.json(team);
     },
   )
-  .route("/", teamInvitesRoute)
   .get("/", enforceAuthMiddleware(["student"]), async (c) => {
     const user = c.var.user;
 
@@ -218,16 +228,97 @@ const app = new Hono()
     return c.json([...teamMap.values()]);
   })
   .patch(
-    "/:teamId/submit",
+    "/:id/submit",
     enforceAuthMiddleware(["student"]),
     zValidator(
       "param",
       z.object({
-        teamId: z.uuid(),
+        id: z.uuid(),
       }),
     ),
-    async (c) => {},
-  )
-  .get("/:eventId", enforceAuthMiddleware(["teacher"]), async (c) => {});
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const user = c.var.user;
+
+      const teamCount = alias(teamsTable, "team_count");
+
+      const submittedTeam = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .select({
+            team: teamsTable,
+            event: eventsTable,
+            totalMembers: sql<number>`count(${teamInvitationsTable.id})::int + 1`,
+            totalTeams: tx.$count(
+              teamCount,
+              and(
+                eq(teamCount.eventId, eventsTable.id),
+                eq(teamCount.status, "accepted"),
+              ),
+            ),
+          })
+          .from(teamsTable)
+          .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
+          .leftJoin(
+            teamInvitationsTable,
+            and(
+              eq(teamInvitationsTable.teamId, teamsTable.id),
+              eq(teamInvitationsTable.status, "accepted"),
+            ),
+          )
+          .where(
+            and(
+              eq(teamsTable.id, id),
+              eq(teamsTable.leaderId, user.id),
+              gt(eventsTable.registrationClosesAt, new Date()),
+              eq(eventsTable.isActive, true),
+            ),
+          )
+          .groupBy(teamsTable.id, eventsTable.id);
+
+        if (!row) throw new NotFoundException("Team not found");
+
+        if (row.team.registeredAt !== null)
+          throw new BadRequestException(
+            "You have already submitted your team for this event",
+          );
+
+        if (row.event.minTeamSize && row.totalMembers < row.event.minTeamSize)
+          throw new BadRequestException(
+            `You need at least ${row.event.minTeamSize} members in your team to register for this event`,
+          );
+
+        if (row.event.maxTeamSize && row.totalMembers > row.event.maxTeamSize)
+          throw new BadRequestException(
+            `You can have a maximum of ${row.event.maxTeamSize} members in your team`,
+          );
+
+        if (row.event.maxTeams && row.totalTeams >= row.event.maxTeams)
+          throw new BadRequestException(
+            `The event already has a maximum number of teams allowed: ${row.event.maxTeams}`,
+          );
+
+        const [team] = await tx
+          .update(teamsTable)
+          .set({ status: "pending", registeredAt: new Date() })
+          .where(and(eq(teamsTable.id, id), isNull(teamsTable.registeredAt)))
+          .returning();
+
+        if (!team)
+          throw new BadRequestException("Team is possibly already submitted");
+
+        await tx
+          .update(participantsTable)
+          .set({
+            registeredAt: team.registeredAt,
+            registrationStatus: "pending",
+          })
+          .where(eq(participantsTable.teamId, id));
+
+        return team;
+      });
+
+      return c.json(submittedTeam);
+    },
+  );
 
 export default app;

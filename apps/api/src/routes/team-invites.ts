@@ -19,7 +19,7 @@ import { ForbiddenException } from "../exceptions/forbidden-exception.js";
 
 const app = new Hono()
   .post(
-    "/invite",
+    "/",
     enforceAuthMiddleware(["student"]),
     zValidator("json", teamMemberInviteSchema),
     async (c) => {
@@ -132,7 +132,7 @@ const app = new Hono()
       return c.json(invite);
     },
   )
-  .get("/invites", enforceAuthMiddleware(["student"]), async (c) => {
+  .get("/", enforceAuthMiddleware(["student"]), async (c) => {
     const user = c.var.user;
 
     const invites = await db
@@ -149,7 +149,7 @@ const app = new Hono()
     return c.json(invites);
   })
   .patch(
-    "/invites/:id/action",
+    "/:id",
     enforceAuthMiddleware(["student"]),
     zValidator("param", z.object({ id: z.uuid() })),
     zValidator("json", z.object({ action: z.enum(["accepted", "rejected"]) })),

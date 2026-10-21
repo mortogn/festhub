@@ -15,9 +15,8 @@ export const teamsTable = pgTable(
 
     name: text("name").notNull(),
     status: text("status", { enum: ["accepted", "pending", "rejected"] }),
-    registeredAt: timestamp("registered_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    registeredAt: timestamp("registered_at", { withTimezone: true }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   },
   (table) => [unique().on(table.eventId, table.name)],
 );
@@ -40,3 +39,5 @@ export const teamInvitationsTable = pgTable(
   },
   (table) => [unique().on(table.teamId, table.studentId)],
 );
+
+export type TeamSelect = typeof teamsTable.$inferSelect;

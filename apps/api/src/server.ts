@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { HTTPException } from "hono/http-exception";
 
-import eventsRoutes from "./routes/events.js";
+import eventsRoutes from "./routes/events/index.js";
 import authRoutes from "./routes/auth.js";
 import studentsRoute from "./routes/students.js";
 import volunteersRoute from "./routes/volunteers.js";
@@ -16,6 +16,7 @@ import teachersRoute from "./routes/teachers.js";
 import organizersRoute from "./routes/organizer.js";
 import participantsRoute from "./routes/participants.js";
 import teamsRoute from "./routes/teams.js";
+import teamInvitesRoute from "./routes/team-invites.js";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -46,6 +47,7 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/organizers", organizersRoute)
   .route("/participants", participantsRoute)
   .route("/teams", teamsRoute)
+  .route("/team-invites", teamInvitesRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {
