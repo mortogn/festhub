@@ -4,16 +4,27 @@ import {
   createEventSchema,
   updateEventSchema,
 } from "@festhub/shared/validation";
-import { Variables } from "../server.js";
+import { Variables } from "../../server.js";
 import { db } from "@festhub/db";
-import { eventsTable, venuesTable } from "@festhub/db/schema";
-import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
-import { enforceAuthMiddleware } from "../middlewares/enforce-auth-middleware.js";
-import { and, desc, eq, lt, gt, ne } from "drizzle-orm";
+import {
+  eventsTable,
+  participantsTable,
+  studentsTable,
+  TeamSelect,
+  teamsTable,
+  usersTable,
+  venuesTable,
+} from "@festhub/db/schema";
+import { InternalServerErrorException } from "../../exceptions/internal-server-error-exception.js";
+import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
+import { and, desc, eq, lt, gt, ne, isNotNull } from "drizzle-orm";
 import z from "zod";
-import { NotFoundException } from "../exceptions/not-found-exception.js";
+import { NotFoundException } from "../../exceptions/not-found-exception.js";
 import { HTTPException } from "hono/http-exception";
-import { BadRequestException } from "../exceptions/bad-request-exception.js";
+import { BadRequestException } from "../../exceptions/bad-request-exception.js";
+
+import eventVenuesRoute from "./event-venues.js";
+import eventParticipantsRoute from "./event-participants.js";
 
 const app = new Hono<{ Variables: Variables }>()
   .post(
@@ -135,59 +146,67 @@ const app = new Hono<{ Variables: Variables }>()
       throw new InternalServerErrorException("Internal Server Error", err);
     }
   })
-  .patch(
-    "/:eventId/venue",
-    enforceAuthMiddleware(["teacher", "admin"]),
+  .route("/", eventVenuesRoute)
+  .route("/", eventParticipantsRoute)
+  .get(
+    "/:id/teams",
+    enforceAuthMiddleware(["teacher"]),
     zValidator("param", z.object({ eventId: z.uuid() })),
-    zValidator("json", z.object({ venueId: z.uuid() })),
     async (c) => {
-      const { venueId } = c.req.valid("json");
       const { eventId } = c.req.valid("param");
 
-      const venue = await db.transaction(async (tx) => {
-        const [event] = await tx
-          .select()
-          .from(eventsTable)
-          .where(eq(eventsTable.id, eventId))
-          .for("update");
+      const teams = await db
+        .select({
+          team: teamsTable,
+          member: {
+            id: usersTable.id,
+            email: usersTable.email,
+            displayImage: usersTable.displayImage,
+            department: studentsTable.department,
+            batch: studentsTable.batch,
+            studentId: studentsTable.studentId,
+          },
+        })
+        .from(teamsTable)
+        .leftJoin(
+          participantsTable,
+          eq(participantsTable.teamId, teamsTable.id),
+        )
+        .leftJoin(
+          studentsTable,
+          eq(participantsTable.studentId, studentsTable.userId),
+        )
+        .leftJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+        .where(
+          and(
+            eq(teamsTable.eventId, eventId),
+            isNotNull(teamsTable.registeredAt),
+          ),
+        );
 
-        if (!event) throw new BadRequestException("Invalid eventId provided");
+      const teamMap = new Map<
+        TeamSelect["id"],
+        TeamSelect & {
+          members: Array<(typeof teams)[number]["member"]>;
+        }
+      >();
 
-        const [venue] = await tx
-          .select()
-          .from(venuesTable)
-          .where(eq(venuesTable.id, venueId))
-          .for("update");
+      teams.filter(({ team, member }) => {
+        let item = teamMap.get(team.id);
 
-        if (!venue) throw new BadRequestException("Invalid venueId provided");
+        if (!item) {
+          item = {
+            ...team,
+            members: [],
+          };
 
-        const [conflict] = await tx
-          .select({ id: eventsTable.id })
-          .from(eventsTable)
-          .where(
-            and(
-              eq(eventsTable.venueId, venueId),
-              ne(eventsTable.id, eventId),
-              lt(eventsTable.startsAt, event.endsAt),
-              gt(eventsTable.endsAt, event.startsAt),
-            ),
-          )
-          .limit(1);
+          teamMap.set(team.id, item);
+        }
 
-        if (conflict)
-          throw new BadRequestException(
-            "The venue is not available and can not be selected for this event",
-          );
-
-        await tx
-          .update(eventsTable)
-          .set({ venueId: venue.id })
-          .where(eq(eventsTable.id, eventId));
-
-        return venue;
+        if (member) item.members.push(member);
       });
 
-      return c.json(venue);
+      return c.json([...teamMap.values()]);
     },
   );
 
