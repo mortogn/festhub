@@ -19,9 +19,9 @@ const app = new Hono()
   .get(
     "/:id/teams",
     enforceAuthMiddleware(["teacher"]),
-    zValidator("param", z.object({ eventId: z.uuid() })),
+    zValidator("param", z.object({ id: z.uuid() })),
     async (c) => {
-      const { eventId } = c.req.valid("param");
+      const { id } = c.req.valid("param");
 
       const teams = await db
         .select({
@@ -46,10 +46,7 @@ const app = new Hono()
         )
         .leftJoin(usersTable, eq(studentsTable.userId, usersTable.id))
         .where(
-          and(
-            eq(teamsTable.eventId, eventId),
-            isNotNull(teamsTable.registeredAt),
-          ),
+          and(eq(teamsTable.eventId, id), isNotNull(teamsTable.registeredAt)),
         );
 
       const teamMap = new Map<
