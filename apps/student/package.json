@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@festhub/api": "workspace:*",
+    "@festhub/ui": "workspace:*",
+    "dayjs": "^1.11.23",
+    "hono": "^4.13.13",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

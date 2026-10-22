@@ -7,7 +7,8 @@
     "./validation": {
       "types": "./validation/index.ts",
       "default": "./validation/index.ts"
-    }
+    },
+    "./utils/*": "./utils/*"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,6 +18,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "dayjs": "^1.11.23",
     "zod": "^4.6.7"
   }
 }
