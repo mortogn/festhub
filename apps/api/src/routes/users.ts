@@ -14,6 +14,7 @@ const app = new Hono().get("/self", enforceAuthMiddleware(), async (c) => {
       email: usersTable.email,
       displayImage: usersTable.displayImage,
       role: usersTable.role,
+      name: usersTable.name,
     })
     .from(usersTable)
     .where(eq(usersTable.id, authUser.id));

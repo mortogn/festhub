@@ -5,6 +5,7 @@ import React from "react";
 import MaxWidthWrapper from "./max-width-wrapper";
 import Link from "next/link";
 import { useAuthContext } from "@/context/auth-user-context";
+import Image from "next/image";
 
 const Header: React.FC = () => {
   const currentUser = useAuthContext();
@@ -12,10 +13,13 @@ const Header: React.FC = () => {
   return (
     <MaxWidthWrapper>
       <header className="py-5 w-full flex items-center justify-between relative">
-        <img alt="" src={"/logo.svg"} className="h-14 " />
+        <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
 
         {currentUser ? (
-          <div>{currentUser.email}</div>
+          <div className="flex items-center gap-2 border border-border py-1.5 px-3 rounded-md shadow-sm">
+            <div className="size-8 rounded-full bg-secondary border border-border"></div>
+            <p className="font-medium text-sm">{currentUser.name}</p>
+          </div>
         ) : (
           <div className="space-x-2">
             <Button asChild className="px-5" size={"lg"} variant={"secondary"}>
