@@ -8,6 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import VolunteerCard from "./_components/volunteer-card";
+import ParticipantCard from "./_components/participant-card";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -74,7 +75,8 @@ async function EventContent({ params }: Props) {
           <p>{event.description}</p>
         </div>
 
-        <div className="max-w-100 w-full">
+        <div className="max-w-100 w-full space-y-5">
+          <ParticipantCard event={event} />
           {event.volunteerRegistration === "open" && (
             <VolunteerCard event={event} />
           )}

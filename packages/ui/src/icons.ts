@@ -8,4 +8,5 @@ export {
   ArrowLeft,
   HandHeartIcon,
   UsersIcon,
+  ExternalLinkIcon,
 } from "lucide-react";
