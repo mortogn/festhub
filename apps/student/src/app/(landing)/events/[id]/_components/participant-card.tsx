@@ -113,7 +113,11 @@ export default function ParticipantCard({ event }: Props) {
       {event.teamBased ? (
         <div className="space-y-2">
           <Button asChild variant="link" className="w-full justify-between px-0">
-            <Link href="/teams/create" target="_blank" rel="noopener noreferrer">
+            <Link
+              href={`/teams/create?eventId=${event.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Create a team
               <ExternalLinkIcon />
             </Link>
