@@ -17,7 +17,7 @@ import {
 } from "@festhub/db/schema";
 import { InternalServerErrorException } from "../../exceptions/internal-server-error-exception.js";
 import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
-import { and, desc, eq, lt, gt, ne, isNotNull } from "drizzle-orm";
+import { and, desc, eq, lt, gt, ne, isNotNull, sql } from "drizzle-orm";
 import z from "zod";
 import { NotFoundException } from "../../exceptions/not-found-exception.js";
 import { HTTPException } from "hono/http-exception";
@@ -102,8 +102,14 @@ const app = new Hono<{ Variables: Variables }>()
         endsAt: eventsTable.endsAt,
         isActive: eventsTable.isActive,
         volunteerRegistration: eventsTable.volunteerRegistration,
+        description: sql<string>`LEFT(${eventsTable.description}, 200)`,
+        venue: {
+          id: venuesTable.id,
+          title: venuesTable.title,
+        },
       })
       .from(eventsTable)
+      .leftJoin(venuesTable, eq(venuesTable.id, eventsTable.venueId))
       .orderBy(desc(eventsTable.startsAt))
       .$dynamic();
 
