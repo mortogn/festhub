@@ -20,13 +20,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <AuthUserContextProvider>
-      <html
-        lang="en"
-        className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
-      >
-        <body className="min-h-full flex flex-col">{children}</body>
-      </html>
-    </AuthUserContextProvider>
+    <html
+      lang="en"
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <AuthUserContextProvider>{children}</AuthUserContextProvider>
+      </body>
+    </html>
   );
 }

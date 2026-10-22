@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useAuthContext } from "@/context/auth-user-context";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInSchema } from "@festhub/shared/validation";
@@ -25,6 +26,7 @@ import { KeyIcon, MailIcon } from "@festhub/ui/icons";
 type FormValues = z.infer<typeof signInSchema>;
 
 const SignInForm: React.FC = () => {
+  const { retry: refreshUser } = useAuthContext();
   const form = useForm<FormValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: "", password: "" },
@@ -53,6 +55,7 @@ const SignInForm: React.FC = () => {
         return;
       }
 
+      refreshUser();
       router.push("/");
     } catch {
       form.setError("root", {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuthContext } from "@/context/auth-user-context";
+
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { studentSignUpSchema } from "@festhub/shared/validation";
@@ -74,6 +76,7 @@ const fields = [
 ] as const;
 
 export default function SignUpForm() {
+  const { retry: refreshUser } = useAuthContext();
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -111,6 +114,7 @@ export default function SignUpForm() {
         return;
       }
 
+      refreshUser();
       router.push("/");
     } catch {
       form.setError("root", {

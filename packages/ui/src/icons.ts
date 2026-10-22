@@ -9,4 +9,7 @@ export {
   HandHeartIcon,
   UsersIcon,
   ExternalLinkIcon,
+  LayoutDashboardIcon,
+  GraduationCapIcon,
+  ArrowUpRightIcon,
 } from "lucide-react";

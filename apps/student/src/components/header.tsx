@@ -8,7 +8,7 @@ import { useAuthContext } from "@/context/auth-user-context";
 import Image from "next/image";
 
 const Header: React.FC = () => {
-  const currentUser = useAuthContext();
+  const { user: currentUser } = useAuthContext();
 
   return (
     <MaxWidthWrapper>
@@ -16,10 +16,13 @@ const Header: React.FC = () => {
         <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
 
         {currentUser ? (
-          <div className="flex items-center gap-2 border border-border py-1.5 px-3 rounded-md shadow-sm">
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 border border-border py-1.5 px-3 rounded-md shadow-sm hover:bg-muted"
+          >
             <div className="size-8 rounded-full bg-secondary border border-border"></div>
             <p className="font-medium text-sm">{currentUser.name}</p>
-          </div>
+          </Link>
         ) : (
           <div className="space-x-2">
             <Button asChild className="px-5" size={"lg"} variant={"secondary"}>
