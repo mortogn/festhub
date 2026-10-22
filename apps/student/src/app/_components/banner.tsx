@@ -60,14 +60,13 @@ const Banner: React.FC = () => {
       </MaxWidthWrapper>
 
       <div className="absolute right-0 bottom-0 top-0 -z-10">
-        <div className="relative h-full w-300">
+        <div className="relative h-full w-350">
           <Image
-            src={"/pub.png"}
+            src={"/pub_banner.png"}
             alt="pub"
-            quality={90}
             loading="eager"
             fill
-            className="object-cover object-[center_25%] opacity-50"
+            className="object-cover object-[center_34%] opacity-50"
           />
         </div>
       </div>
