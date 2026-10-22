@@ -15,6 +15,7 @@ import {
   MapPinIcon,
 } from "@festhub/ui/icons";
 import { InferResponseType } from "hono";
+import Link from "next/link";
 import React from "react";
 
 type EventsResponse = InferResponseType<(typeof client)["events"]["$get"], 200>;
@@ -55,9 +56,11 @@ const EventCard: React.FC<EventCardProps> = ({ data }) => {
         </CardDescription>
       </CardHeader>
       <CardFooter className="mt-0">
-        <Button variant={"secondary"} className="group w-full">
-          View details{" "}
-          <ArrowRightIcon className="group-hover:translate-x-1 transition" />
+        <Button asChild variant={"secondary"} className="group w-full">
+          <Link href={`/events/${data.id}`}>
+            View details{" "}
+            <ArrowRightIcon className="group-hover:translate-x-1 transition" />
+          </Link>
         </Button>
       </CardFooter>
     </Card>
