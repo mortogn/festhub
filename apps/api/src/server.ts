@@ -6,6 +6,7 @@ import { JWTPayload } from "./utils/jwt.js";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { HTTPException } from "hono/http-exception";
+import { cors } from "hono/cors";
 
 import eventsRoutes from "./routes/events/index.js";
 import authRoutes from "./routes/auth.js";
@@ -37,6 +38,14 @@ export type Variables = {
 
 const app = new Hono<{ Variables: Variables }>()
   .use(logger())
+  .use(
+    "*",
+    cors({
+      origin: ["http://localhost:3000"],
+      allowMethods: ["GET", "POST", "PATCH", "PUT"],
+      credentials: true,
+    }),
+  )
   .use("*", authMiddleware) // Auth Middleware only checks and includes user the request but does not enforce it
   .route("/auth", authRoutes)
   .route("/events", eventsRoutes)
