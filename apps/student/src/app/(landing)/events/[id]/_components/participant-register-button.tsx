@@ -1,81 +1,83 @@
 "use client";
 
 import client from "@/lib/api";
+import { useAuthContext } from "@/context/auth-user-context";
 import { Button } from "@festhub/ui/components/button";
 import { UsersIcon } from "@festhub/ui/icons";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {
+  MutationButton,
+  ResourceContent,
+  StatusBadge,
+} from "@festhub/frontend/ui";
+import { readResponse } from "@festhub/frontend/api";
+import Link from "next/link";
+import { useEventActivity } from "./event-activity";
 
-type Props = {
-  eventId: string;
-  disabled: boolean;
-};
-
-export default function ParticipantRegisterButton({ eventId, disabled }: Props) {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function register() {
-    if (disabled || isSubmitting || isRegistered) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const response = await client.participants.$post({ json: { eventId } });
-
-      if (response.status === 401) {
-        router.push("/sign-in");
-        return;
-      }
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(
-          "message" in data && typeof data.message === "string"
-            ? data.message
-            : "Unable to register right now. Please try again.",
-        );
-        return;
-      }
-
-      setIsRegistered(true);
-    } catch {
-      setError("Could not connect. Check your connection and try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <Button
-        type="button"
-        className="w-full h-11"
-        size="lg"
-        onClick={register}
-        disabled={disabled || isSubmitting || isRegistered}
-        aria-busy={isSubmitting}
-      >
-        <UsersIcon />
-        {isRegistered
-          ? "Registration requested"
-          : isSubmitting
-            ? "Registering…"
-            : "Join as a participant"}
+type Props = { eventId: string; disabled: boolean };
+export default function ParticipantRegisterButton({
+  eventId,
+  disabled,
+}: Props) {
+  const { user, status, retry } = useAuthContext();
+  const { student } = useEventActivity();
+  const existing = student.data?.events.find((event) => event.id === eventId);
+  if (status === "loading")
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Loading your account…
+      </p>
+    );
+  if (status === "error")
+    return (
+      <div>
+        <p role="alert" className="text-sm text-muted-foreground">
+          Unable to load your account.
+        </p>
+        <Button variant="outline" onClick={retry}>
+          Try again
+        </Button>
+      </div>
+    );
+  if (status === "unauthenticated")
+    return (
+      <Button asChild className="h-11 w-full" disabled={disabled}>
+        <Link href="/sign-in">Sign in to participate</Link>
       </Button>
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+    );
+  if (user?.role !== "student")
+    return (
+      <p className="text-sm text-muted-foreground">
+        Registration is available to student accounts.
+      </p>
+    );
+  return (
+    <ResourceContent resource={student}>
+      {existing ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">
+              Your registration
+            </span>
+            <StatusBadge status={existing.joinStatus} />
+          </div>
+          <Button asChild variant="secondary" className="w-full">
+            <Link href="/profile">View your registrations</Link>
+          </Button>
+        </div>
+      ) : (
+        <MutationButton
+          disabled={disabled}
+          variant="default"
+          className="h-11 w-full"
+          action={async () =>
+            readResponse(await client.participants.$post({ json: { eventId } }))
+          }
+          onSuccess={student.retry}
+        >
+          <UsersIcon />
+          Join as a participant
+        </MutationButton>
       )}
-      {isRegistered && (
-        <p role="status" className="text-sm text-muted-foreground">
-          Your registration is pending approval.
-        </p>
-      )}
-    </div>
+    </ResourceContent>
   );
 }

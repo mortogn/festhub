@@ -1,5 +1,5 @@
 import { cn } from "@festhub/ui/lib/utils";
-import React, { PropsWithChildren } from "react";
+import React from "react";
 
 const MaxWidthWrapper: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   children,

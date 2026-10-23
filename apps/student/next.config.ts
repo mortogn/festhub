@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@festhub/shared"],
+  transpilePackages: ["@festhub/shared", "@festhub/frontend"],
   turbopack: {
     rules: {
       "*.css": {

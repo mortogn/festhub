@@ -1,9 +1,9 @@
 import client from "@/lib/api";
 import { formatDateTime } from "@/utils/format-date-time";
-import { Button } from "@festhub/ui/components/button";
-import { CalendarClockIcon, HandHeartIcon, UsersIcon } from "@festhub/ui/icons";
+import { CalendarClockIcon, HandHeartIcon } from "@festhub/ui/icons";
 import { InferResponseType } from "hono";
 import React from "react";
+import VolunteerRegisterButton from "./volunteer-register-button";
 
 type Props = {
   event: InferResponseType<(typeof client)["events"][":id"]["$get"], 200>;
@@ -51,10 +51,11 @@ const VolunteerCard: React.FC<Props> = ({ event }) => {
           </p>
         </div>
       </div>
-      <Button className="w-full h-11" size={"lg"}>
-        <UsersIcon />
-        Apply as a volunteer
-      </Button>
+      <VolunteerRegisterButton
+        eventId={event.id}
+        open={event.volunteerRegistration === "open"}
+        endsAt={event.endsAt}
+      />
     </div>
   );
 };

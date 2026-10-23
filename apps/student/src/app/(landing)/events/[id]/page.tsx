@@ -9,6 +9,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import VolunteerCard from "./_components/volunteer-card";
 import ParticipantCard from "./_components/participant-card";
+import {
+  EventActivityProvider,
+  VolunteerCardVisibility,
+} from "./_components/event-activity";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,6 +26,10 @@ async function EventContent({ params }: Props) {
   if (!response.ok) notFound();
 
   const event = await response.json();
+  const summaryResponse = await client.events.$get();
+  const summaries = summaryResponse.ok ? await summaryResponse.json() : [];
+  const venueTitle = summaries.find((item) => item.id === event.id)?.venue
+    ?.title;
 
   return (
     <div>
@@ -50,15 +58,15 @@ async function EventContent({ params }: Props) {
           </div>
         </div>
 
-        <div className="px-10 text-primary-foreground space-y-6">
-          <h1 className="text-primary-foreground text-6xl font-black">
+        <div className="px-5 sm:px-10 text-primary-foreground space-y-6">
+          <h1 className="text-primary-foreground text-3xl sm:text-5xl lg:text-6xl font-black">
             {event.title}
           </h1>
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MapPinIcon />
-              <span>{event.venueId}</span>
+              <span>{venueTitle || "Venue will be announced"}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -69,17 +77,22 @@ async function EventContent({ params }: Props) {
         </div>
       </div>
 
-      <div className="flex items-start gap-5">
-        <div className="border border-border shadow-sm flex-1 px-10 py-6 space-y-3 rounded-md">
+      <div className="flex flex-col lg:flex-row items-start gap-5">
+        <div className="border border-border shadow-sm w-full flex-1 px-6 sm:px-10 py-6 space-y-3 rounded-md">
           <h2 className="text-2xl font-bold tracking-tight">Description</h2>
           <p>{event.description}</p>
         </div>
 
-        <div className="max-w-100 w-full space-y-5">
-          <ParticipantCard event={event} />
-          {event.volunteerRegistration === "open" && (
-            <VolunteerCard event={event} />
-          )}
+        <div className="lg:max-w-100 w-full space-y-5">
+          <EventActivityProvider>
+            <ParticipantCard event={event} />
+            <VolunteerCardVisibility
+              eventId={event.id}
+              publicSetting={event.volunteerRegistration !== null}
+            >
+              <VolunteerCard event={event} />
+            </VolunteerCardVisibility>
+          </EventActivityProvider>
         </div>
       </div>
     </div>

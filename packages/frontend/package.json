@@ -1,0 +1,31 @@
+{
+  "name": "@festhub/frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@festhub/api": "workspace:*",
+    "@festhub/shared": "workspace:*",
+    "@festhub/ui": "workspace:*",
+    "hono": "^4.13.13",
+    "dayjs": "^1.11.23",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "next": "16.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

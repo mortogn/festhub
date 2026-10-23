@@ -25,10 +25,12 @@ import { TooltipProvider } from "@festhub/ui/components/tooltip";
 import {
   ArrowLeft,
   LayoutDashboardIcon,
+  HandHeartIcon,
   MailIcon,
   UsersIcon,
 } from "@festhub/ui/icons";
 import Link from "next/link";
+import { SignOutButton } from "@festhub/frontend/auth";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { PropsWithChildren, useEffect } from "react";
@@ -37,6 +39,7 @@ import { getInitials } from "./profile-utils";
 
 const navigation = [
   { title: "Overview", href: "/profile", icon: LayoutDashboardIcon },
+  { title: "Volunteering", href: "/profile/volunteering", icon: HandHeartIcon },
   { title: "My teams", href: "/profile/teams", icon: UsersIcon },
   { title: "Team invitations", href: "/profile/team-invites", icon: MailIcon },
 ];
@@ -46,18 +49,24 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
   const { setOpenMobile, state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
   const { invites } = useProfileData();
-  const pendingInvites = invites.data?.filter((invite) => invite.status === "pending").length;
+  const pendingInvites = invites.data?.filter(
+    (invite) => invite.status === "pending",
+  ).length;
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className={isCollapsed ? "items-center p-2" : "items-center p-3"}>
+      <SidebarHeader
+        className={isCollapsed ? "items-center p-2" : "items-center p-3"}
+      >
         <Link
           href="/"
           aria-label="FestHub home"
           onClick={() => setOpenMobile(false)}
-          className={isCollapsed
-            ? "flex size-8 shrink-0 items-center justify-center rounded-md"
-            : "flex w-fit items-center justify-center rounded-md p-2"}
+          className={
+            isCollapsed
+              ? "flex size-8 shrink-0 items-center justify-center rounded-md"
+              : "flex w-fit items-center justify-center rounded-md p-2"
+          }
         >
           {isCollapsed ? (
             <span className="block h-8 w-6 overflow-hidden" aria-hidden="true">
@@ -74,7 +83,9 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
           )}
         </Link>
         {!isCollapsed && (
-          <p className="px-2 text-xs text-muted-foreground">Student dashboard</p>
+          <p className="px-2 text-xs text-muted-foreground">
+            Student dashboard
+          </p>
         )}
       </SidebarHeader>
       <SidebarContent>
@@ -84,15 +95,28 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
             <SidebarMenu>
               {navigation.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                    <Link href={item.href} onClick={() => setOpenMobile(false)} aria-current={pathname === item.href ? "page" : undefined}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      pathname === item.href ||
+                      (item.href !== "/profile" &&
+                        pathname.startsWith(item.href + "/"))
+                    }
+                    tooltip={item.title}
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={() => setOpenMobile(false)}
+                      aria-current={pathname === item.href ? "page" : undefined}
+                    >
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
-                  {item.href === "/profile/team-invites" && !!pendingInvites && (
-                    <SidebarMenuBadge>{pendingInvites}</SidebarMenuBadge>
-                  )}
+                  {item.href === "/profile/team-invites" &&
+                    !!pendingInvites && (
+                      <SidebarMenuBadge>{pendingInvites}</SidebarMenuBadge>
+                    )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -123,7 +147,9 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
                 </div>
                 <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                   <p className="truncate text-sm font-medium">{user.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </p>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -135,9 +161,13 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
   );
 }
 
-function DashboardFrame({ user, children }: PropsWithChildren<{ user: AuthUser }>) {
+function DashboardFrame({
+  user,
+  children,
+}: PropsWithChildren<{ user: AuthUser }>) {
   const pathname = usePathname();
-  const title = navigation.find((item) => item.href === pathname)?.title ?? "Profile";
+  const title =
+    navigation.find((item) => item.href === pathname)?.title ?? "Profile";
 
   return (
     <TooltipProvider>
@@ -150,6 +180,9 @@ function DashboardFrame({ user, children }: PropsWithChildren<{ user: AuthUser }
             <span className="text-sm text-muted-foreground">Profile</span>
             <span className="text-muted-foreground/50">/</span>
             <span className="text-sm font-medium">{title}</span>
+            <div className="ml-auto">
+              <SignOutButton />
+            </div>
           </header>
           <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
             {children}
@@ -173,7 +206,9 @@ export default function ProfileShell({ children }: PropsWithChildren) {
       <main className="flex min-h-svh items-center justify-center p-6">
         <div className="w-full max-w-md space-y-4 rounded-md border border-border p-6">
           <h1 className="text-xl font-semibold">Unable to open your profile</h1>
-          <p role="alert" className="text-sm text-muted-foreground">{error}</p>
+          <p role="alert" className="text-sm text-muted-foreground">
+            {error}
+          </p>
           <Button onClick={retry}>Try again</Button>
         </div>
       </main>
@@ -182,11 +217,20 @@ export default function ProfileShell({ children }: PropsWithChildren) {
 
   if (status !== "authenticated" || !user) {
     return (
-      <main role="status" className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-6 p-6">
-        <span className="sr-only">{status === "unauthenticated" ? "Redirecting to sign in" : "Loading your profile"}</span>
+      <main
+        role="status"
+        className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-6 p-6"
+      >
+        <span className="sr-only">
+          {status === "unauthenticated"
+            ? "Redirecting to sign in"
+            : "Loading your profile"}
+        </span>
         <Skeleton className="h-8 w-56" />
         <div className="grid gap-4 sm:grid-cols-3">
-          {[0, 1, 2].map((item) => <Skeleton key={item} className="h-28" />)}
+          {[0, 1, 2].map((item) => (
+            <Skeleton key={item} className="h-28" />
+          ))}
         </div>
         <Skeleton className="h-64 w-full" />
       </main>
@@ -198,8 +242,13 @@ export default function ProfileShell({ children }: PropsWithChildren) {
       <main className="flex min-h-svh items-center justify-center p-6">
         <div className="max-w-md space-y-4 rounded-md border border-border p-6">
           <h1 className="text-xl font-semibold">Student profiles</h1>
-          <p className="text-sm text-muted-foreground">This dashboard is available to student accounts.</p>
-          <Button asChild variant="outline"><Link href="/">Browse events</Link></Button>
+          <p className="text-sm text-muted-foreground">
+            This dashboard is available to student accounts.
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/">Browse events</Link>
+          </Button>
+          <SignOutButton />
         </div>
       </main>
     );

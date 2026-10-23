@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@festhub/ui/components/select";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuthContext } from "@/context/auth-user-context";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,6 +36,7 @@ type Props = {
 
 export default function CreateTeamForm({ events, initialEventId }: Props) {
   const router = useRouter();
+  const { user, status, retry } = useAuthContext();
   const form = useForm<FormValues>({
     resolver: zodResolver(createTeamSchema),
     defaultValues: { name: "", eventId: initialEventId ?? "" },
@@ -71,6 +74,31 @@ export default function CreateTeamForm({ events, initialEventId }: Props) {
       });
     }
   }
+
+  if (status === "loading")
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Loading your account…
+      </p>
+    );
+  if (status === "error")
+    return (
+      <Button variant="outline" onClick={retry}>
+        Retry loading your account
+      </Button>
+    );
+  if (status === "unauthenticated")
+    return (
+      <Button asChild className="w-full">
+        <Link href="/sign-in">Sign in to create a team</Link>
+      </Button>
+    );
+  if (user?.role !== "student")
+    return (
+      <p className="text-sm text-muted-foreground">
+        Teams are available to student accounts.
+      </p>
+    );
 
   return (
     <form

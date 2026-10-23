@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3000",
     "lint": "eslint"
   },
   "dependencies": {
@@ -19,7 +19,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.90.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@festhub/frontend": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

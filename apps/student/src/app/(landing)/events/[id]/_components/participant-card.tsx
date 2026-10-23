@@ -1,14 +1,9 @@
 import client from "@/lib/api";
 import { formatDateTime } from "@/utils/format-date-time";
-import { Button } from "@festhub/ui/components/button";
-import {
-  CalendarClockIcon,
-  ExternalLinkIcon,
-  UsersIcon,
-} from "@festhub/ui/icons";
+import { CalendarClockIcon, UsersIcon } from "@festhub/ui/icons";
 import { InferResponseType } from "hono";
-import Link from "next/link";
 import ParticipantRegisterButton from "./participant-register-button";
+import TeamEventActions from "./team-event-actions";
 
 type Props = {
   event: InferResponseType<(typeof client)["events"][":id"]["$get"], 200>;
@@ -85,7 +80,9 @@ export default function ParticipantCard({ event }: Props) {
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Maximum teams</span>
-            <span className="font-semibold">{event.maxTeams || "No limit"}</span>
+            <span className="font-semibold">
+              {event.maxTeams || "No limit"}
+            </span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Minimum team size</span>
@@ -111,28 +108,7 @@ export default function ParticipantCard({ event }: Props) {
 
       <p className="text-sm text-muted-foreground">{status}</p>
       {event.teamBased ? (
-        <div className="space-y-2">
-          <Button asChild variant="link" className="w-full justify-between px-0">
-            <Link
-              href={`/teams/create?eventId=${event.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Create a team
-              <ExternalLinkIcon />
-            </Link>
-          </Button>
-          <Button asChild variant="link" className="w-full justify-between px-0">
-            <Link
-              href="/profile/team-invites"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View team invitations
-              <ExternalLinkIcon />
-            </Link>
-          </Button>
-        </div>
+        <TeamEventActions eventId={event.id} />
       ) : (
         <ParticipantRegisterButton
           eventId={event.id}

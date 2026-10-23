@@ -5,7 +5,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@festhub/ui/components/input-group";
-import React, { useState } from "react";
+import React from "react";
 import { SearchIcon } from "@festhub/ui/icons";
 import MaxWidthWrapper from "@/components/max-width-wrapper";
 import { cn } from "@festhub/ui/lib/utils";
@@ -13,15 +13,23 @@ import Image from "next/image";
 
 const TYPES = ["All", "Contest", "Workshop", "Seminar"];
 
-const Banner: React.FC = () => {
-  const [selectedType, setSelectedType] = useState("All");
-
+const Banner = ({
+  search,
+  onSearch,
+  selectedType,
+  onTypeChange,
+}: {
+  search: string;
+  onSearch: (value: string) => void;
+  selectedType: string;
+  onTypeChange: (value: string) => void;
+}) => {
   return (
     <section className="bg-sky-50/60 min-h-80 flex items-center mb-7 relative">
       <MaxWidthWrapper>
         <div className="space-y-5 max-w-190">
-          <h1 className="text-5xl font-black tracking-tight">
-            Expore Campus Events
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight">
+            Explore Campus Events
           </h1>
           <p className="tracking-wide">
             Find hackathon, programming contest, typing contest and many more
@@ -35,6 +43,9 @@ const Banner: React.FC = () => {
               </InputGroupAddon>
 
               <InputGroupInput
+                value={search}
+                onChange={(event) => onSearch(event.target.value)}
+                aria-label="Search events"
                 className="font-medium"
                 placeholder="Search events, keywords, categories etc"
               />
@@ -44,7 +55,8 @@ const Banner: React.FC = () => {
             {TYPES.map((type) => (
               <button
                 key={type}
-                onClick={() => setSelectedType(type)}
+                onClick={() => onTypeChange(type)}
+                aria-pressed={selectedType === type}
                 className={cn(
                   "text-xs bg-secondary text-secondary-foreground px-4 font-medium py-1 rounded-full border border-border",
                   {
@@ -66,7 +78,7 @@ const Banner: React.FC = () => {
             alt="pub"
             loading="eager"
             fill
-            className="object-cover object-[center_34%] opacity-50"
+            className="object-cover object-[center_34%] opacity-90"
           />
         </div>
       </div>

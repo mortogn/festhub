@@ -8,8 +8,6 @@ import {
   PropsWithChildren,
   useCallback,
   useContext,
-  useEffect,
-  useState,
 } from "react";
 
 export type StudentProfile = InferResponseType<
@@ -22,47 +20,8 @@ export type TeamInvites = InferResponseType<
   200
 >;
 
-export type Resource<T> = {
-  data: T | null;
-  isLoading: boolean;
-  error: string | null;
-  retry: () => void;
-};
-
-export function useResource<T>(load: () => Promise<T>): Resource<T> {
-  const [state, setState] = useState<Omit<Resource<T>, "retry">>({
-    data: null,
-    isLoading: true,
-    error: null,
-  });
-  const [attempt, setAttempt] = useState(0);
-  const retry = useCallback(() => {
-    setState({ data: null, isLoading: true, error: null });
-    setAttempt((value) => value + 1);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    load().then(
-      (data) => {
-        if (active) setState({ data, isLoading: false, error: null });
-      },
-      () => {
-        if (active)
-          setState({
-            data: null,
-            isLoading: false,
-            error: "Unable to load this information. Please try again.",
-          });
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [load, attempt]);
-
-  return { ...state, retry };
-}
+export { useResource, type Resource } from "@festhub/frontend/resource";
+import { useResource, type Resource } from "@festhub/frontend/resource";
 
 async function readResponse<T>(
   response: Response,
@@ -96,11 +55,16 @@ export function ProfileDataProvider({
     [user.id, refreshUser],
   );
   const loadTeams = useCallback(
-    async () => readResponse<StudentTeams>(await client.teams.$get(), refreshUser),
+    async () =>
+      readResponse<StudentTeams>(await client.teams.$get(), refreshUser),
     [refreshUser],
   );
   const loadInvites = useCallback(
-    async () => readResponse<TeamInvites>(await client["team-invites"].$get(), refreshUser),
+    async () =>
+      readResponse<TeamInvites>(
+        await client["team-invites"].$get(),
+        refreshUser,
+      ),
     [refreshUser],
   );
   const student = useResource(loadStudent);
