@@ -258,9 +258,8 @@ export function StaffTeachersPage() {
                 <DialogHeader>
                   <DialogTitle>Invite a teacher</DialogTitle>
                   <DialogDescription>
-                    Allow a teacher to sign up with their email address. Share
-                    the signup link with them afterward; no email is sent
-                    automatically.
+                    Enable this email address for teacher signup. The teacher
+                    can then use it to sign up
                   </DialogDescription>
                 </DialogHeader>
                 <Editor
@@ -273,7 +272,7 @@ export function StaffTeachersPage() {
                     },
                   ]}
                   submitLabel="Enable teacher signup"
-                  successMessage="Teacher signup enabled. Share the teacher signup link with them."
+                  successMessage="Teacher email enabled. They can now sign up using this email address."
                   onSubmit={async (values) => {
                     await readResponse(
                       await client.teachers.invite.$post({
