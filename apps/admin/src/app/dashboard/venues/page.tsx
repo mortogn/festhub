@@ -1,6 +1,11 @@
+import { StaffPageGuard } from "@festhub/frontend/staff-shell";
 import { StaffVenuesPage } from "@festhub/frontend/staff-venues";
 
 export const metadata = { title: "Venues" };
 export default function Page() {
-  return <StaffVenuesPage />;
+  return (
+    <StaffPageGuard role="admin">
+      <StaffVenuesPage />
+    </StaffPageGuard>
+  );
 }

@@ -593,7 +593,7 @@ export function StaffEventPage({ id }: { id: string }) {
                 <VolunteerRoster eventId={id} />
               </TabsContent>
               <TabsContent value="organizers">
-                <EventOrganizers eventId={id} />
+                <EventOrganizers key={id} eventId={id} />
               </TabsContent>
             </Tabs>
           </>
@@ -1251,6 +1251,9 @@ function TeamRegistrations({ eventId }: { eventId: string }) {
 }
 
 function EventOrganizers({ eventId }: { eventId: string }) {
+  const { user } = useAuthContext();
+  const [search, setSearch] = useState("");
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
   const loadOrganizers = useCallback(
     async () =>
       readResponse(
@@ -1264,80 +1267,148 @@ function EventOrganizers({ eventId }: { eventId: string }) {
   );
   const organizers = useResource(loadOrganizers);
   const teachers = useResource(loadTeachers);
-  const available = (teachers.data ?? []).filter(
-    (teacher) =>
-      !organizers.data?.some((organizer) => organizer.id === teacher.id),
+  const query = search.trim().toLowerCase();
+  const teacherRows = (teachers.data ?? []).map((teacher) => {
+    const organizer = organizers.data?.find(
+      (organizer) => organizer.id === teacher.id,
+    );
+    // Teacher endpoints omit names. Use known names, then fall back to email.
+    const name =
+      organizer?.name ??
+      (user?.id === teacher.id ? user.name : null) ??
+      teacher.email;
+    return {
+      ...teacher,
+      name,
+      assigned: Boolean(organizer) || assignedIds.includes(teacher.id),
+    };
+  });
+  const filteredTeachers = teacherRows.filter((teacher) =>
+    [teacher.name, teacher.teacherId, teacher.email].some((value) =>
+      value.toLowerCase().includes(query),
+    ),
   );
+  const organizerRows = [
+    ...(organizers.data ?? []),
+    ...teacherRows.filter(
+      (teacher) =>
+        assignedIds.includes(teacher.id) &&
+        !organizers.data?.some((organizer) => organizer.id === teacher.id),
+    ),
+  ];
   return (
     <div className="grid items-start gap-6 lg:grid-cols-2">
-      <Section title="Event organizers">
+      <Section title="Organizers">
         <ResourceContent resource={organizers}>
-          {organizers.data?.length ? (
-            <div className="space-y-4">
-              {organizers.data.map((organizer) => (
-                <div
-                  className="border-b pb-4 last:border-0 last:pb-0"
+          {organizerRows.length ? (
+            <div className="space-y-3">
+              {organizerRows.map((organizer) => (
+                <article
                   key={organizer.id}
+                  className="flex min-w-0 items-center gap-3 rounded-xl border p-3 sm:p-4"
                 >
-                  <Link
-                    className="font-medium hover:underline"
-                    href={`/dashboard/teachers/${organizer.id}`}
-                  >
-                    {organizer.name}
-                  </Link>
-                  <p className="text-sm text-muted-foreground">
-                    {organizer.teacherId} · {organizer.email}
-                  </p>
-                </div>
+                  <PersonAvatar
+                    name={organizer.name}
+                    image={organizer.displayImage}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      className="font-medium break-words hover:underline"
+                      href={`/dashboard/teachers/${organizer.id}`}
+                    >
+                      {organizer.name}
+                    </Link>
+                    <p className="text-sm break-words text-muted-foreground">
+                      {organizer.teacherId}
+                    </p>
+                  </div>
+                </article>
               ))}
             </div>
           ) : (
             <EmptyState
               title="No organizers assigned"
-              description="Assign a teacher to coordinate this event."
+              description="Assign a teacher to organize this event."
             />
           )}
         </ResourceContent>
       </Section>
       <Section
-        title="Assign an organizer"
-        description="Choose a teacher by institutional ID or email."
+        title="Teachers"
+        description="Assign teachers to organize this event."
       >
-        <ResourceContent resource={teachers}>
-          {organizers.data &&
-            (available.length ? (
-              <Editor
-                key={organizers.data.map((organizer) => organizer.id).join(",")}
-                fields={[
-                  {
-                    name: "teacherId",
-                    label: "Teacher",
-                    type: "select",
-                    required: true,
-                    options: available.map((teacher) => ({
-                      value: teacher.id,
-                      label: `${teacher.teacherId} — ${teacher.email}`,
-                    })),
-                  },
-                ]}
-                initialValues={{ teacherId: "" }}
-                submitLabel="Assign organizer"
-                onSubmit={async (values) => {
-                  await readResponse(
-                    await client.organizers.assign.$post({
-                      json: { eventId, teacherId: values.teacherId! },
-                    }),
-                  );
-                  organizers.retry();
-                }}
-              />
-            ) : (
-              <EmptyState
-                title="No teachers available"
-                description="All registered teachers are assigned, or no teachers have registered yet."
-              />
-            ))}
-        </ResourceContent>
+        <div className="space-y-4">
+          <SearchInput
+            aria-label="Search teachers"
+            placeholder="Search by name, teacher ID, or email"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <ResourceContent resource={teachers}>
+            <ResourceContent resource={organizers}>
+              {filteredTeachers.length ? (
+                <div className="space-y-3">
+                  {filteredTeachers.map((teacher) => (
+                    <article
+                      className="flex min-w-0 items-center gap-3 rounded-xl border p-3 sm:p-4"
+                      key={teacher.id}
+                    >
+                      <PersonAvatar
+                        name={teacher.name}
+                        image={teacher.displayImage}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          className="font-medium break-words hover:underline"
+                          href={`/dashboard/teachers/${teacher.id}`}
+                        >
+                          {teacher.name}
+                        </Link>
+                        <p className="text-sm break-words text-muted-foreground">
+                          {teacher.teacherId}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {teacher.assigned ? (
+                          <Button variant="outline" disabled>
+                            Assigned
+                          </Button>
+                        ) : (
+                          <MutationButton
+                            variant="default"
+                            successMessage="Teacher assigned to this event."
+                            action={async () =>
+                              readResponse(
+                                await client.organizers.assign.$post({
+                                  json: { eventId, teacherId: teacher.id },
+                                }),
+                              )
+                            }
+                            onSuccess={() =>
+                              setAssignedIds((ids) => [...ids, teacher.id])
+                            }
+                          >
+                            Assign
+                            <span className="sr-only"> {teacher.name}</span>
+                          </MutationButton>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title={query ? "No matching teachers" : "No teachers available"}
+                  description={
+                    query
+                      ? "Try a different name, teacher ID, or email."
+                      : "Teachers will appear here after they finish signing up."
+                  }
+                />
+              )}
+            </ResourceContent>
+          </ResourceContent>
+        </div>
       </Section>
     </div>
   );

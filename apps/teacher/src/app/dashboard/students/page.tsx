@@ -1,6 +1,11 @@
+import { StaffPageGuard } from "@festhub/frontend/staff-shell";
 import { StaffStudentsPage } from "@festhub/frontend/staff-directory";
 
 export const metadata = { title: "Students" };
 export default function Page() {
-  return <StaffStudentsPage />;
+  return (
+    <StaffPageGuard role="teacher">
+      <StaffStudentsPage />
+    </StaffPageGuard>
+  );
 }

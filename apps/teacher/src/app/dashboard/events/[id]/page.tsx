@@ -1,3 +1,4 @@
+import { StaffPageGuard } from "@festhub/frontend/staff-shell";
 import { Suspense } from "react";
 import { StaffEventPage } from "@festhub/frontend/staff-events";
 
@@ -9,8 +10,10 @@ async function Content({ params }: Props) {
 }
 export default function Page(props: Props) {
   return (
-    <Suspense fallback="Loading…">
-      <Content {...props} />
-    </Suspense>
+    <StaffPageGuard role="teacher">
+      <Suspense fallback="Loading…">
+        <Content {...props} />
+      </Suspense>
+    </StaffPageGuard>
   );
 }

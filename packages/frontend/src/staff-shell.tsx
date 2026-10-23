@@ -43,7 +43,7 @@ const navigation = [
   { href: "/dashboard/teachers", label: "Teachers", icon: GraduationCapIcon },
 ];
 
-export function StaffShell({
+export function StaffPageGuard({
   role,
   children,
 }: PropsWithChildren<{ role: "teacher" | "admin" }>) {
@@ -58,6 +58,9 @@ export function StaffShell({
         className="mx-auto w-full max-w-7xl space-y-6 p-8"
         aria-label="Loading dashboard"
       >
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading dashboard…
+        </p>
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -82,6 +85,20 @@ export function StaffShell({
         <SignOutButton />
       </div>
     );
+  return children;
+}
+
+export function StaffShell({
+  role,
+  children,
+}: PropsWithChildren<{ role: "teacher" | "admin" }>) {
+  const auth = useAuthContext();
+  if (
+    auth.status !== "authenticated" ||
+    !auth.user ||
+    auth.user.role !== role
+  )
+    return children;
   return (
     <TooltipProvider>
       <SidebarProvider key={auth.user.id}>
