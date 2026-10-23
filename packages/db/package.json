@@ -6,18 +6,19 @@
   "types": "module",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./schema": {
-      "types": "./src/schema/index.ts",
-      "default": "./src/schema/index.ts"
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
     }
   },
   "scripts": {
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "build": "tsc -p tsconfig.json"
   },
   "keywords": [],
   "author": "",
