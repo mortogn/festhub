@@ -72,13 +72,13 @@ const Banner = ({
       </MaxWidthWrapper>
 
       <div className="absolute right-0 bottom-0 top-0 -z-10">
-        <div className="relative h-full w-350">
+        <div className="relative h-full w-80 sm:w-120 md:w-160 lg:w-250 xl:w-350">
           <Image
             src={"/pub_banner.png"}
             alt="pub"
             loading="eager"
             fill
-            className="object-cover object-[center_34%] opacity-90"
+            className="object-cover object-[center_34%] opacity-40 lg:opacity-90"
           />
         </div>
       </div>
