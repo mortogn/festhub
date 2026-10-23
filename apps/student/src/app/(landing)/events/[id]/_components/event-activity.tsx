@@ -7,6 +7,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useAuthContext } from "@/context/auth-user-context";
+import { useStudentData } from "@/context/student-data-context";
 import client from "@/lib/api";
 import { readResponse } from "@festhub/frontend/api";
 import { useResource, type Resource } from "@festhub/frontend/resource";
@@ -22,15 +23,7 @@ type Activity = {
 const Context = createContext<Activity | null>(null);
 function ActivityLoader({ children }: PropsWithChildren) {
   const { user, status } = useAuthContext();
-  const loadStudent = useCallback(
-    async () =>
-      user?.role === "student" && status === "authenticated"
-        ? readResponse(
-            await client.students[":id"].$get({ param: { id: user.id } }),
-          )
-        : null,
-    [user, status],
-  );
+  const { student } = useStudentData();
   const loadTeams = useCallback(
     async () =>
       user?.role === "student" && status === "authenticated"
@@ -38,7 +31,6 @@ function ActivityLoader({ children }: PropsWithChildren) {
         : [],
     [user, status],
   );
-  const student = useResource(loadStudent);
   const teams = useResource(loadTeams);
   return (
     <Context.Provider value={{ student, teams }}>{children}</Context.Provider>

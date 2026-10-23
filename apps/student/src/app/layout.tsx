@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthUserContextProvider from "@/context/auth-user-context";
+import StudentDataProvider from "@/context/student-data-context";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthUserContextProvider>{children}</AuthUserContextProvider>
+        <AuthUserContextProvider>
+          <StudentDataProvider>{children}</StudentDataProvider>
+        </AuthUserContextProvider>
       </body>
     </html>
   );

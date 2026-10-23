@@ -34,7 +34,9 @@ import { SignOutButton } from "@festhub/frontend/auth";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { PropsWithChildren, useEffect } from "react";
-import { ProfileDataProvider, useProfileData } from "./profile-data";
+import { ProfileDataProvider } from "./profile-data";
+import { useStudentData } from "@/context/student-data-context";
+import InvitationNotifications from "@/components/invitation-notifications";
 import { getInitials } from "./profile-utils";
 
 const navigation = [
@@ -48,10 +50,11 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
   const pathname = usePathname();
   const { setOpenMobile, state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
-  const { invites } = useProfileData();
-  const pendingInvites = invites.data?.filter(
-    (invite) => invite.status === "pending",
-  ).length;
+  const { pendingTeams, pendingVolunteering } = useStudentData();
+  const counts: Record<string, number> = {
+    "/profile/team-invites": pendingTeams.length,
+    "/profile/volunteering": pendingVolunteering.length,
+  };
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -113,10 +116,13 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
-                  {item.href === "/profile/team-invites" &&
-                    !!pendingInvites && (
-                      <SidebarMenuBadge>{pendingInvites}</SidebarMenuBadge>
-                    )}
+                  {!!counts[item.href] && (
+                    <SidebarMenuBadge
+                      aria-label={`${counts[item.href]} pending invitations`}
+                    >
+                      {counts[item.href] > 99 ? "99+" : counts[item.href]}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -177,10 +183,15 @@ function DashboardFrame({
           <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
             <SidebarTrigger />
             <div className="h-4 w-px bg-border" />
-            <span className="text-sm text-muted-foreground">Profile</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-sm font-medium">{title}</span>
-            <div className="ml-auto">
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              Profile
+            </span>
+            <span className="hidden text-muted-foreground/50 sm:inline">/</span>
+            <span className="min-w-0 truncate text-sm font-medium">
+              {title}
+            </span>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <InvitationNotifications />
               <SignOutButton />
             </div>
           </header>

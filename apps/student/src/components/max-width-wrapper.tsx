@@ -8,7 +8,10 @@ const MaxWidthWrapper: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
 }) => {
   return (
     <div
-      className={cn("max-w-380 w-full px-4 mx-auto", className)}
+      className={cn(
+        "max-w-380 w-full px-5 md:px-10 lg:px-14 mx-auto",
+        className,
+      )}
       {...restProps}
     >
       {children}
