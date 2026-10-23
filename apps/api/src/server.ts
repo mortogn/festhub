@@ -25,6 +25,10 @@ dotenv.config({
   override: false,
 });
 
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim());
+
 export type Variables = {
   user:
     | {
@@ -42,11 +46,7 @@ const app = new Hono<{ Variables: Variables }>()
   .use(
     "*",
     cors({
-      origin: [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-      ],
+      origin: allowedOrigins,
       allowMethods: ["GET", "POST", "PATCH", "PUT"],
       credentials: true,
     }),
