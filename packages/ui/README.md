@@ -36,7 +36,9 @@ selected app. Commit the generated source, package dependency changes, and lockf
 Initialized from preset `bIkeymG` with Radix and `--pointer`: Vega style, neutral
 theme and chart colors, default radius, Lucide icons, and Inter typography with
 inherited heading font. The app layouts load Inter using `next/font` and retain
-Geist Mono. The theme and `dark:` utilities follow the device color preference;
+Geist Mono. All three apps use light mode regardless of device color preference,
+including native controls and toast notifications. Dark tokens and `dark:`
+utilities require an explicit `.dark` class, which the apps do not set;
 no theme provider is required.
 
 Keep the style, icon library, and base color aligned across all four
