@@ -5,6 +5,7 @@ import type { InferRequestType, InferResponseType } from "hono";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@festhub/ui/components/button";
+import { Badge } from "@festhub/ui/components/badge";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,8 @@ import {
   fromDateInput,
   toDateInput,
 } from "./dates";
-import { useResource } from "./resource";
+import { useResource, type Resource } from "./resource";
+import { usePendingRegistrations } from "./pending-registrations";
 import {
   Editor,
   EmptyState,
@@ -93,11 +95,15 @@ function FilterSelect({
 
 function EventCards({
   events,
+  pendingRegistrations,
+  eventMetadata,
 }: {
   events: (Pick<Events[number], "id" | "title" | "startsAt" | "endsAt"> &
     Partial<
       Pick<Events[number], "type" | "isActive" | "teamBased" | "venue">
     >)[];
+  pendingRegistrations: ReturnType<typeof usePendingRegistrations>;
+  eventMetadata: Resource<Events>;
 }) {
   return (
     <div className="@container">
@@ -133,6 +139,11 @@ function EventCards({
                       : " · Individual registration"}
                   </p>
                 )}
+                <PendingRegistrationIndicator
+                  event={event}
+                  pendingRegistrations={pendingRegistrations}
+                  eventMetadata={eventMetadata}
+                />
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
@@ -164,6 +175,58 @@ function EventCards({
   );
 }
 
+function PendingRegistrationIndicator({
+  event,
+  pendingRegistrations,
+  eventMetadata,
+}: {
+  event: { id: string; teamBased?: boolean };
+  pendingRegistrations: ReturnType<typeof usePendingRegistrations>;
+  eventMetadata: Resource<Events>;
+}) {
+  const resolved =
+    typeof event.teamBased === "boolean"
+      ? { id: event.id, teamBased: event.teamBased }
+      : null;
+  const result = resolved ? pendingRegistrations.getCount(resolved) : null;
+  const unavailable = resolved
+    ? result?.status === "error"
+    : !eventMetadata.isLoading;
+  if (unavailable) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Pending count unavailable.{" "}
+        <button
+          type="button"
+          className="rounded-sm underline underline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label="Retry pending registration count"
+          onClick={() =>
+            resolved ? pendingRegistrations.retry(resolved) : eventMetadata.retry()
+          }
+        >
+          Retry
+        </button>
+      </p>
+    );
+  }
+  if (!result || result.status === "loading") {
+    return (
+      <p className="text-xs text-muted-foreground">Checking registrations…</p>
+    );
+  }
+  if (result.status !== "ready" || result.count === 0) return null;
+  const label = event.teamBased ? "team" : "participant";
+  return (
+    <Badge
+      variant="secondary"
+      className="h-auto max-w-full whitespace-normal bg-amber-500/10 text-amber-700 dark:text-amber-400"
+    >
+      {result.count} {label}
+      {result.count === 1 ? "" : "s"} pending
+    </Badge>
+  );
+}
+
 export function StaffOverview() {
   const [now] = useState(() => Date.now());
   const { user } = useAuthContext();
@@ -188,6 +251,17 @@ export function StaffOverview() {
     .filter((event) => new Date(event.endsAt).getTime() > now)
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
     .slice(0, 6);
+  const organizedEvents = (assigned.data ?? []).map((event) => ({
+    ...event,
+    ...events.data?.find((item) => item.id === event.id),
+  }));
+  const pendingRegistrations = usePendingRegistrations(
+    [...upcoming, ...organizedEvents].flatMap((event) =>
+      typeof event.teamBased === "boolean"
+        ? [{ id: event.id, teamBased: event.teamBased }]
+        : [],
+    ),
+  );
   const pending = (requests.data ?? []).filter(
     (request) => request.registrationStatus === "pending",
   );
@@ -214,7 +288,11 @@ export function StaffOverview() {
           >
             <ResourceContent resource={events}>
               {upcoming.length ? (
-                <EventCards events={upcoming} />
+                <EventCards
+                  events={upcoming}
+                  pendingRegistrations={pendingRegistrations}
+                  eventMetadata={events}
+                />
               ) : (
                 <EmptyState
                   title="No upcoming events"
@@ -229,7 +307,11 @@ export function StaffOverview() {
             <Section title="Events you organize">
               <ResourceContent resource={assigned}>
                 {assigned.data?.length ? (
-                  <EventCards events={assigned.data} />
+                  <EventCards
+                    events={organizedEvents}
+                    pendingRegistrations={pendingRegistrations}
+                    eventMetadata={events}
+                  />
                 ) : (
                   <EmptyState
                     title="No assigned events"
@@ -297,6 +379,7 @@ export function StaffEventsPage() {
           new Date(event.endsAt).getTime() > now === (period === "upcoming")),
     )
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  const pendingRegistrations = usePendingRegistrations(filtered);
   return (
     <div className="space-y-6">
       <PageHeading
@@ -352,7 +435,11 @@ export function StaffEventsPage() {
       </div>
       <ResourceContent resource={events}>
         {filtered.length ? (
-          <EventCards events={filtered} />
+          <EventCards
+            events={filtered}
+            pendingRegistrations={pendingRegistrations}
+            eventMetadata={events}
+          />
         ) : (
           <EmptyState
             title="No matching events"
