@@ -14,6 +14,7 @@ import {
   EventActivityProvider,
   VolunteerCardVisibility,
 } from "./_components/event-activity";
+import { renderMarkdown } from "@/lib/md";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -88,7 +89,14 @@ async function EventContent({ params }: Props) {
       <div className="flex flex-col lg:flex-row items-start gap-5">
         <div className="border border-border shadow-sm w-full flex-1 px-6 sm:px-10 py-6 space-y-3 rounded-md">
           <h2 className="text-2xl font-bold tracking-tight">Description</h2>
-          <p>{event.description}</p>
+          {event.description && (
+            <div
+              className="prose"
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(event.description),
+              }}
+            ></div>
+          )}
         </div>
 
         <div className="lg:max-w-100 w-full space-y-5">

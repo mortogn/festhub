@@ -15,13 +15,14 @@ const Header: React.FC = () => {
   return (
     <MaxWidthWrapper>
       <header className="py-5 w-full flex items-center justify-between relative">
-        <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
-
+        <Link href={"/"}>
+          <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
+        </Link>
         {currentUser ? (
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <InvitationNotifications />
             <Link
-              href="/profile/account"
+              href="/profile"
               className="flex min-w-0 items-center gap-2 border border-border py-1.5 h-10 px-3 rounded-md shadow-sm hover:bg-muted"
             >
               <UploadedAvatar

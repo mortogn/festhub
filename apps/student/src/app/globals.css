@@ -1,5 +1,5 @@
 @import "@festhub/ui/globals.css";
-
+@plugin "@tailwindcss/typography";
 @source "../";
 
 @source "../../../../packages/frontend/src";
