@@ -4,12 +4,8 @@ import Link from "next/link";
 import client from "@/lib/api";
 import { readResponse } from "@festhub/frontend/api";
 import { useResource } from "@festhub/frontend/resource";
-import {
-  Editor,
-  MutationButton,
-  PageHeading,
-  Section,
-} from "@festhub/frontend/ui";
+import { MutationButton, PageHeading, Section } from "@festhub/frontend/ui";
+import { UploadedAvatar } from "@festhub/frontend/uploaded-image";
 import { formatDateTime } from "@/utils/format-date-time";
 import { useProfileData } from "../../_components/profile-data";
 import {
@@ -17,13 +13,11 @@ import {
   ResourceContent,
   StatusBadge,
 } from "../../_components/profile-ui";
-import {
-  getInitials,
-  getTeamMembers,
-  getTeamStatus,
-} from "../../_components/profile-utils";
+import { getTeamMembers, getTeamStatus } from "../../_components/profile-utils";
 import { Button } from "@festhub/ui/components/button";
 import { z } from "zod";
+import { TeamInviteDialog } from "../_components/team-invite-dialog";
+import { ArrowLeft } from "@festhub/ui/icons";
 
 export default function TeamDetails({ teamId }: { teamId: string }) {
   const { user, teams, student, invites } = useProfileData();
@@ -69,9 +63,10 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
   const deadlineOpen =
     !!config?.registrationClosesAt &&
     new Date(config.registrationClosesAt).getTime() > now;
-  const canInvite = !!config?.isActive && deadlineOpen && draft && isLeader;
+  const eligibleToSubmit =
+    !!config?.isActive && deadlineOpen && draft && isLeader;
   const withinWindow =
-    canInvite &&
+    eligibleToSubmit &&
     !!config.registrationOpensAt &&
     new Date(config.registrationOpensAt).getTime() < now;
   const sizeValid =
@@ -84,18 +79,34 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
   };
   return (
     <>
-      <PageHeading
-        title={team.name}
-        description={item.event?.title ?? "Event unavailable"}
-        action={<StatusBadge status={getTeamStatus(team)} />}
-      />
-      <Button asChild variant="link" className="px-0">
-        <Link href="/profile/teams">Back to your teams</Link>
-      </Button>
+      <div className="space-y-1">
+        <Button asChild variant={"secondary"} size={"icon"}>
+          <Link href={"/profile/teams"}>
+            <ArrowLeft />
+            <span className="sr-only">Go back to team</span>
+          </Link>
+        </Button>
+        <PageHeading
+          title={team.name}
+          description={item.event?.title ?? "Event unavailable"}
+          action={<StatusBadge status={getTeamStatus(team)} />}
+        />
+      </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Section
-          title="Team members"
-          description={`${members.length} members · You are ${isLeader ? "the team leader" : "a member"}`}
+          title={
+            <>
+              Team members <span className="font-mono">({members.length})</span>
+            </>
+          }
+          description={`You are ${isLeader ? "the team leader" : "a member"}`}
+          action={
+            <TeamInviteDialog
+              team={team}
+              memberCount={members.length}
+              size="icon"
+            />
+          }
         >
           <ul className="divide-y divide-border">
             {members.map((member, index) => (
@@ -103,12 +114,11 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
                 key={`${member.id}-${index}`}
                 className="flex items-start gap-3 py-4 first:pt-0 last:pb-0"
               >
-                <div
-                  aria-hidden
-                  className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-medium"
-                >
-                  {getInitials(member.name ?? "Member")}
-                </div>
+                <UploadedAvatar
+                  imageId={member.displayImageId}
+                  name={member.name || "Member"}
+                  className="size-9"
+                />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {member.name ?? "Member"}
@@ -188,59 +198,6 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
           </Section>
         </div>
       </div>
-      {isLeader && draft && (
-        <Section
-          title="Invite a team member"
-          description="Use their institutional student number or FestHub user UUID."
-        >
-          <ResourceContent resource={event}>
-            {config &&
-              (canInvite &&
-              (!config.maxTeamSize || members.length < config.maxTeamSize) ? (
-                <>
-                  <Editor
-                    fields={[
-                      {
-                        name: "studentId",
-                        label: "Student ID",
-                        required: true,
-                      },
-                    ]}
-                    submitLabel="Send invitation"
-                    onSubmit={async (values) => {
-                      await readResponse(
-                        await client["team-invites"].$post({
-                          json: {
-                            studentId: values.studentId!.trim(),
-                            teamId: team.id,
-                          },
-                        }),
-                      );
-                    }}
-                  />
-                  <p className="mt-4 text-xs text-muted-foreground">
-                    The invitation was sent when you see a success message. The
-                    API does not provide a sent-invitations list; refresh your
-                    team after members accept.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={teams.retry}
-                  >
-                    Refresh members
-                  </Button>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Invitations are unavailable because registration has closed,
-                  the event is inactive, or your team is full.
-                </p>
-              ))}
-          </ResourceContent>
-        </Section>
-      )}
     </>
   );
 }

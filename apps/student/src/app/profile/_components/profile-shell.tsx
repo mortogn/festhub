@@ -27,6 +27,7 @@ import {
   LayoutDashboardIcon,
   HandHeartIcon,
   MailIcon,
+  UserRoundIcon,
   UsersIcon,
 } from "@festhub/ui/icons";
 import Link from "next/link";
@@ -37,10 +38,11 @@ import { PropsWithChildren, useEffect } from "react";
 import { ProfileDataProvider } from "./profile-data";
 import { useStudentData } from "@/context/student-data-context";
 import InvitationNotifications from "@/components/invitation-notifications";
-import { getInitials } from "./profile-utils";
+import { UploadedAvatar } from "@festhub/frontend/uploaded-image";
 
 const navigation = [
   { title: "Overview", href: "/profile", icon: LayoutDashboardIcon },
+  { title: "Profile", href: "/profile/account", icon: UserRoundIcon },
   { title: "Volunteering", href: "/profile/volunteering", icon: HandHeartIcon },
   { title: "My teams", href: "/profile/teams", icon: UsersIcon },
   { title: "Team invitations", href: "/profile/team-invites", icon: MailIcon },
@@ -93,7 +95,7 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>My profile</SidebarGroupLabel>
+          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navigation.map((item) => (
@@ -146,11 +148,16 @@ function ProfileSidebar({ user }: { user: AuthUser }) {
       <SidebarFooter className="border-t border-sidebar-border p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={user.name}>
-              <Link href="/profile" onClick={() => setOpenMobile(false)}>
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-semibold">
-                  {getInitials(user.name)}
-                </div>
+            <SidebarMenuButton asChild size="lg" tooltip="My profile">
+              <Link
+                href="/profile/account"
+                onClick={() => setOpenMobile(false)}
+              >
+                <UploadedAvatar
+                  imageId={user.displayImageId}
+                  name={user.name}
+                  className="size-8"
+                />
                 <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                   <p className="truncate text-sm font-medium">{user.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
@@ -184,7 +191,7 @@ function DashboardFrame({
             <SidebarTrigger />
             <div className="h-4 w-px bg-border" />
             <span className="hidden text-sm text-muted-foreground sm:inline">
-              Profile
+              Dashboard
             </span>
             <span className="hidden text-muted-foreground/50 sm:inline">/</span>
             <span className="min-w-0 truncate text-sm font-medium">

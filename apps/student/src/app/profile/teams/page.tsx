@@ -1,26 +1,22 @@
 "use client";
 
-import { formatDateTime } from "@/utils/format-date-time";
 import { Badge } from "@festhub/ui/components/badge";
 import { Button } from "@festhub/ui/components/button";
+import { UploadedAvatar } from "@festhub/frontend/uploaded-image";
 import { UsersIcon } from "@festhub/ui/icons";
 import Link from "next/link";
 import { useProfileData } from "../_components/profile-data";
 import {
   EmptyState,
-  EventDates,
   ProfileSection,
   ResourceContent,
   StatusBadge,
 } from "../_components/profile-ui";
-import {
-  getInitials,
-  getTeamMembers,
-  getTeamStatus,
-} from "../_components/profile-utils";
+import { getTeamMembers, getTeamStatus } from "../_components/profile-utils";
+import { TeamInviteDialog } from "./_components/team-invite-dialog";
 
 export default function ProfileTeamsPage() {
-  const { user, student, teams } = useProfileData();
+  const { user, teams } = useProfileData();
   const sortedTeams = [...(teams.data ?? [])].sort((a, b) =>
     a.team.name.localeCompare(b.team.name),
   );
@@ -57,34 +53,26 @@ export default function ProfileTeamsPage() {
               return (
                 <ProfileSection
                   key={team.id}
-                  title={team.name}
+                  title={
+                    <Link
+                      href={`/profile/teams/${team.id}`}
+                      className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                    >
+                      {team.name}
+                    </Link>
+                  }
                   description={event?.title ?? "Event unavailable"}
                   action={<StatusBadge status={getTeamStatus(team)} />}
                 >
-                  <Button asChild variant="link" className="mb-4 px-0">
-                    <Link href={`/profile/teams/${team.id}`}>View team</Link>
-                  </Button>
-                  <div className="mb-5 space-y-3">
-                    <Badge variant="outline">
-                      {team.leaderId === user.id ? "Team leader" : "Member"}
-                    </Badge>
-                    {event && (
-                      <EventDates
-                        startsAt={event.startsAt}
-                        endsAt={event.endsAt}
-                      />
-                    )}
-                    {team.registeredAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Submitted {formatDateTime(team.registeredAt)}
-                      </p>
-                    )}
-                  </div>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold">Team members</h3>
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      Members: {members.length}
-                    </span>
+                    <h3 className="text-sm font-semibold">
+                      Team members{" "}
+                      <span className="font-mono">({members.length})</span>
+                    </h3>
+                    <TeamInviteDialog
+                      team={team}
+                      memberCount={members.length}
+                    />
                   </div>
                   {members.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -94,24 +82,27 @@ export default function ProfileTeamsPage() {
                     <ul className="divide-y divide-border">
                       {members.map((member, index) => (
                         <li
-                          key={`${member.id ?? "member"}-${index}`}
+                          key={`${member.userId ?? member.id ?? "member"}-${index}`}
                           className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
                         >
-                          <div
-                            aria-hidden="true"
-                            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-medium"
-                          >
-                            {getInitials(member.name ?? "Unknown member")}
-                          </div>
+                          <UploadedAvatar
+                            imageId={member.displayImageId}
+                            name={member.name || "Unknown member"}
+                            className="size-9"
+                          />
                           <div className="min-w-0 space-y-1">
-                            <p className="text-sm font-medium">
-                              {member.name || "Unknown member"}
-                              {member.id &&
-                                member.id === student.data?.studentId && (
-                                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                                    You
-                                  </span>
-                                )}
+                            <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                              <span className="break-words">
+                                {member.name || "Unknown member"}
+                              </span>
+                              {member.userId === team.leaderId && (
+                                <Badge variant="outline">Leader</Badge>
+                              )}
+                              {member.userId === user.id && (
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  You
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {member.id || "Student ID unavailable"}

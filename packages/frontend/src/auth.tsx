@@ -11,7 +11,7 @@ import {
 import type { InferResponseType } from "hono";
 import { useRouter } from "next/navigation";
 import { Button } from "@festhub/ui/components/button";
-import client from "./api";
+import client, { readResponse } from "./api";
 import { toast } from "@festhub/ui/components/sonner";
 import { useToastFeedback } from "./notifications";
 
@@ -21,7 +21,11 @@ type State = {
   status: "loading" | "authenticated" | "unauthenticated" | "error";
   error: string | null;
 };
-type Auth = State & { retry: () => void; signOut: () => Promise<void> };
+type Auth = State & {
+  retry: () => void;
+  refreshUser: () => Promise<void>;
+  signOut: () => Promise<void>;
+};
 const Context = createContext<Auth | null>(null);
 export default function AuthProvider({ children }: PropsWithChildren) {
   const toastFeedback = useToastFeedback();
@@ -32,6 +36,12 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   });
   const [attempt, setAttempt] = useState(0);
   const generation = useRef(0);
+  const refreshUser = useCallback(async () => {
+    const requestGeneration = ++generation.current;
+    const user = await readResponse(await client.users.self.$get());
+    if (requestGeneration === generation.current)
+      setState({ user, status: "authenticated", error: null });
+  }, []);
   const retry = useCallback(() => {
     generation.current++;
     setState({ user: null, status: "loading", error: null });
@@ -93,7 +103,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
   return (
-    <Context.Provider value={{ ...state, retry, signOut }}>
+    <Context.Provider value={{ ...state, retry, refreshUser, signOut }}>
       {children}
     </Context.Provider>
   );

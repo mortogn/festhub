@@ -5,11 +5,7 @@ import type { InferResponseType } from "hono";
 import Link from "next/link";
 import { Button } from "@festhub/ui/components/button";
 import { Badge } from "@festhub/ui/components/badge";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@festhub/ui/components/avatar";
+import { UploadedAvatar } from "./uploaded-image";
 import { Label } from "@festhub/ui/components/label";
 import { Input } from "@festhub/ui/components/input";
 import {
@@ -541,12 +537,6 @@ function InviteVolunteer({
   const student = useResource(loadStudent);
   const searching = lookupId !== null && student.isLoading;
   const match = lookupId === studentId.trim() ? student.data : null;
-  const initials = match?.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("");
   return (
     <Dialog
       open={open}
@@ -616,15 +606,11 @@ function InviteVolunteer({
                 role="status"
                 className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3 sm:gap-4 sm:p-4"
               >
-                <Avatar className="size-12 shrink-0 sm:size-14">
-                  <AvatarImage
-                    src={match.displayImage ?? undefined}
-                    alt={match.name}
-                  />
-                  <AvatarFallback className="text-base font-semibold uppercase">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <UploadedAvatar
+                  imageId={match.displayImageId}
+                  name={match.name}
+                  className="size-12 sm:size-14"
+                />
                 <div className="min-w-0 flex-1 space-y-3">
                   <div>
                     <h3 className="text-base font-semibold break-words">

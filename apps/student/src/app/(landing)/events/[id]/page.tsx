@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { UploadedImage } from "@festhub/frontend/uploaded-image";
 import VolunteerCard from "./_components/volunteer-card";
 import ParticipantCard from "./_components/participant-card";
 import {
@@ -48,11 +49,18 @@ async function EventContent({ params }: Props) {
 
         <div className="absolute h-full w-full -z-10 rounded-md overflow-hidden">
           <div className="relative w-full h-full">
-            <Image
-              src={"/pub_campus.png"}
-              fill
-              alt="campus"
-              className="object-cover"
+            <UploadedImage
+              imageId={event.bannerId}
+              alt={`${event.title} banner`}
+              className="h-full w-full"
+              fallback={
+                <Image
+                  src="/pub_campus.png"
+                  fill
+                  alt="campus"
+                  className="object-cover"
+                />
+              }
             />
             <div className="absolute inset-0 bg-linear-to-r from-primary to-transparent"></div>
           </div>

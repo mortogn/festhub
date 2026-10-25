@@ -87,7 +87,7 @@ export function StaffStudentsPage() {
                 <div className="flex min-w-0 items-center gap-3">
                   <PersonAvatar
                     name={student.name}
-                    image={student.displayImage}
+                    imageId={student.displayImageId}
                   />
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold break-words group-hover:underline">
@@ -304,7 +304,7 @@ export function StaffTeachersPage() {
                 <div className="flex min-w-0 items-center gap-3">
                   <PersonAvatar
                     name={teacher.email}
-                    image={teacher.displayImage}
+                    imageId={teacher.displayImageId}
                   />
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold break-all group-hover:underline">

@@ -15,6 +15,8 @@ import { MapPinIcon, UsersIcon } from "@festhub/ui/icons";
 import client, { readResponse } from "./api";
 import { formatDateTime, fromDateInput } from "./dates";
 import { useResource } from "./resource";
+import { ImageUpload } from "./image-upload";
+import { UploadedImage } from "./uploaded-image";
 import {
   Editor,
   EmptyState,
@@ -61,6 +63,7 @@ export function StaffVenuesPage() {
   const resource = useResource(load);
   const editTrigger = useRef<HTMLButtonElement | null>(null);
   const [editing, setEditing] = useState<Venue | "new" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [availability, setAvailability] = useState<{
     rows: Availability;
     startsAt: string;
@@ -127,7 +130,7 @@ export function StaffVenuesPage() {
     <div className="space-y-6">
       <PageHeading
         title="Venues"
-        description="Manage campus spaces and check availability before assigning an event."
+        description="Manage campus spaces and check availability before assigning an event. Edit a saved venue to add its thumbnail."
         action={
           <Button
             onClick={(event) => {
@@ -142,11 +145,17 @@ export function StaffVenuesPage() {
       <Dialog
         open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditing(null);
+          if (!open && !uploading) setEditing(null);
         }}
       >
         <DialogContent
           className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
+          onEscapeKeyDown={(event) => {
+            if (uploading) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (uploading) event.preventDefault();
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             editTrigger.current?.focus();
@@ -157,27 +166,50 @@ export function StaffVenuesPage() {
               {current ? "Edit venue" : "Create a venue"}
             </DialogTitle>
             <DialogDescription>
-              Set the name, type, and capacity of this campus space.
+              {current
+                ? "Edit the venue details or upload its thumbnail separately."
+                : "Set the name, type, and capacity. After creating the venue, choose Edit to add a thumbnail."}
             </DialogDescription>
           </DialogHeader>
+          {current && (
+            <div className="border-b pb-5">
+              <ImageUpload
+                key={current.id}
+                label="Venue thumbnail"
+                target={{ type: "venue_thumbnail", resourceId: current.id }}
+                currentImageId={current.thumbnailId}
+                onBusyChange={setUploading}
+                onUploaded={(id) => {
+                  setEditing((venue) =>
+                    venue && venue !== "new"
+                      ? { ...venue, thumbnailId: id }
+                      : venue,
+                  );
+                  resource.retry();
+                }}
+              />
+            </div>
+          )}
           {editing && (
-            <Editor
-              key={current?.id ?? "new"}
-              fields={venueFields}
-              initialValues={
-                current
-                  ? {
-                      title: current.title,
-                      description: current.description ?? "",
-                      type: current.type,
-                      capacity: String(current.capacity),
-                    }
-                  : { type: "LAB" }
-              }
-              onSubmit={saveVenue}
-              submitLabel={current ? "Save changes" : "Create venue"}
-              successMessage={current ? "Venue updated." : "Venue created."}
-            />
+            <fieldset disabled={uploading} className="min-w-0">
+              <Editor
+                key={current?.id ?? "new"}
+                fields={venueFields}
+                initialValues={
+                  current
+                    ? {
+                        title: current.title,
+                        description: current.description ?? "",
+                        type: current.type,
+                        capacity: String(current.capacity),
+                      }
+                    : { type: "LAB" }
+                }
+                onSubmit={saveVenue}
+                submitLabel={current ? "Save changes" : "Create venue"}
+                successMessage={current ? "Venue updated." : "Venue created."}
+              />
+            </fieldset>
           )}
         </DialogContent>
       </Dialog>
@@ -196,6 +228,13 @@ export function StaffVenuesPage() {
                 key={venue.id}
                 className="flex min-w-0 flex-col rounded-xl border bg-card p-4 sm:p-5"
               >
+                {venue.thumbnailId && (
+                  <UploadedImage
+                    imageId={venue.thumbnailId}
+                    alt={`${venue.title} thumbnail`}
+                    className="mb-4 aspect-video w-full rounded-lg"
+                  />
+                )}
                 <div className="flex items-start gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                     <MapPinIcon

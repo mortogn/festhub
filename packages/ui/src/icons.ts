@@ -9,6 +9,8 @@ export {
   ArrowLeft,
   HandHeartIcon,
   UsersIcon,
+  PlusIcon,
+  UserRoundIcon,
   ExternalLinkIcon,
   LayoutDashboardIcon,
   GraduationCapIcon,

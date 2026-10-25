@@ -17,6 +17,7 @@ import {
 import { InferResponseType } from "hono";
 import Link from "next/link";
 import React from "react";
+import { UploadedImage } from "@festhub/frontend/uploaded-image";
 
 type EventsResponse = InferResponseType<(typeof client)["events"]["$get"], 200>;
 
@@ -27,7 +28,11 @@ type EventCardProps = {
 const EventCard: React.FC<EventCardProps> = ({ data }) => {
   return (
     <Card className="mt-0 pt-0 space-y-1 gap-2.5 px-0">
-      <div className="aspect-video bg-slate-400"></div>
+      <UploadedImage
+        imageId={data.thumbnailId}
+        alt={`${data.title} thumbnail`}
+        className="aspect-video w-full rounded-t-xl"
+      />
 
       <CardHeader className="mb-0 pb-0">
         <div className="flex gap-1 items-center">

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuthContext } from "@/context/auth-user-context";
 import Image from "next/image";
 import InvitationNotifications from "./invitation-notifications";
+import { UploadedAvatar } from "@festhub/frontend/uploaded-image";
 
 const Header: React.FC = () => {
   const { user: currentUser } = useAuthContext();
@@ -20,10 +21,14 @@ const Header: React.FC = () => {
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <InvitationNotifications />
             <Link
-              href="/profile"
+              href="/profile/account"
               className="flex min-w-0 items-center gap-2 border border-border py-1.5 h-10 px-3 rounded-md shadow-sm hover:bg-muted"
             >
-              <div className="size-6 shrink-0 rounded-full bg-secondary border border-border"></div>
+              <UploadedAvatar
+                imageId={currentUser.displayImageId}
+                name={currentUser.name}
+                className="size-6"
+              />
               <p className="max-w-24 truncate font-medium text-xs sm:max-w-48">
                 {currentUser.name.split(" ")[0]}
               </p>

@@ -42,6 +42,8 @@ import {
   type FieldSpec,
 } from "./ui";
 import { VolunteerRoster } from "./staff-volunteers";
+import { ImageUpload } from "./image-upload";
+import { UploadedImage } from "./uploaded-image";
 
 type EventRecord = InferResponseType<
   (typeof client.events)[":id"]["$get"],
@@ -100,7 +102,10 @@ function EventCards({
 }: {
   events: (Pick<Events[number], "id" | "title" | "startsAt" | "endsAt"> &
     Partial<
-      Pick<Events[number], "type" | "isActive" | "teamBased" | "venue">
+      Pick<
+        Events[number],
+        "type" | "isActive" | "teamBased" | "venue" | "thumbnailId"
+      >
     >)[];
   pendingRegistrations: ReturnType<typeof usePendingRegistrations>;
   eventMetadata: Resource<Events>;
@@ -113,6 +118,13 @@ function EventCards({
             className="flex min-w-0 flex-col rounded-xl border bg-card p-4 sm:p-5"
             key={event.id}
           >
+            {event.thumbnailId && (
+              <UploadedImage
+                imageId={event.thumbnailId}
+                alt={`${event.title} thumbnail`}
+                className="mb-4 aspect-video w-full rounded-lg"
+              />
+            )}
             <div className="flex items-start gap-3">
               <div
                 aria-hidden="true"
@@ -201,7 +213,9 @@ function PendingRegistrationIndicator({
           className="rounded-sm underline underline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           aria-label="Retry pending registration count"
           onClick={() =>
-            resolved ? pendingRegistrations.retry(resolved) : eventMetadata.retry()
+            resolved
+              ? pendingRegistrations.retry(resolved)
+              : eventMetadata.retry()
           }
         >
           Retry
@@ -498,7 +512,7 @@ export function StaffCreateEventPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeading
         title="Create an event"
-        description="Start with the essentials. Configure registration and publish your event next."
+        description="Start with the essentials. Add images, configure registration, and publish your event after creating it."
       />
       <Section title="Event details" description="Bangladesh time (UTC+06:00)">
         <Editor
@@ -568,6 +582,9 @@ export function StaffEventPage({ id }: { id: string }) {
                   <TabsTrigger value="configuration" style={{ height: 40 }}>
                     Configuration
                   </TabsTrigger>
+                  <TabsTrigger value="media" style={{ height: 40 }}>
+                    Media
+                  </TabsTrigger>
                   <TabsTrigger value="registrations" style={{ height: 40 }}>
                     Registrations
                   </TabsTrigger>
@@ -582,6 +599,35 @@ export function StaffEventPage({ id }: { id: string }) {
               <TabsContent value="configuration">
                 <EventConfiguration event={event.data} onChange={event.retry} />
               </TabsContent>
+
+              <TabsContent value="media">
+                <Section
+                  title="Event images"
+                  description="Upload each image separately. Image uploads do not save changes in the other sections."
+                >
+                  <div className="grid items-start gap-6 sm:grid-cols-2">
+                    <ImageUpload
+                      key={`${event.data.id}-thumbnail`}
+                      label="Event thumbnail"
+                      target={{
+                        type: "event_thumbnail",
+                        resourceId: event.data.id,
+                      }}
+                      currentImageId={event.data.thumbnailId}
+                    />
+                    <ImageUpload
+                      key={`${event.data.id}-banner`}
+                      label="Event banner"
+                      target={{
+                        type: "event_banner",
+                        resourceId: event.data.id,
+                      }}
+                      currentImageId={event.data.bannerId}
+                    />
+                  </div>
+                </Section>
+              </TabsContent>
+
               <TabsContent value="registrations">
                 {event.data.teamBased ? (
                   <TeamRegistrations eventId={id} />
@@ -778,6 +824,7 @@ function EventConfiguration({
         Schedule fields use Bangladesh time (UTC+06:00). Save each section
         separately.
       </p>
+
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <Section title="Event details">
           <Editor
@@ -1012,7 +1059,7 @@ function ParticipantRegistrations({ event }: { event: EventRecord }) {
                 <div className="flex items-start gap-3">
                   <PersonAvatar
                     name={participant.name}
-                    image={participant.displayImage}
+                    imageId={participant.displayImageId}
                   />
                   <div className="min-w-0 flex-1">
                     <Link
@@ -1309,7 +1356,7 @@ function EventOrganizers({ eventId }: { eventId: string }) {
                 >
                   <PersonAvatar
                     name={organizer.name}
-                    image={organizer.displayImage}
+                    imageId={organizer.displayImageId}
                   />
                   <div className="min-w-0 flex-1">
                     <Link
@@ -1355,7 +1402,7 @@ function EventOrganizers({ eventId }: { eventId: string }) {
                     >
                       <PersonAvatar
                         name={teacher.name}
-                        image={teacher.displayImage}
+                        imageId={teacher.displayImageId}
                       />
                       <div className="min-w-0 flex-1">
                         <Link
@@ -1398,7 +1445,9 @@ function EventOrganizers({ eventId }: { eventId: string }) {
                 </div>
               ) : (
                 <EmptyState
-                  title={query ? "No matching teachers" : "No teachers available"}
+                  title={
+                    query ? "No matching teachers" : "No teachers available"
+                  }
                   description={
                     query
                       ? "Try a different name, teacher ID, or email."

@@ -4,6 +4,7 @@
       "AllowedOrigins": [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3002",
         "https://student.festhub.morto.dev",
         "https://teacher.festhub.morto.dev",
         "https://admin.festhub.morto.dev"

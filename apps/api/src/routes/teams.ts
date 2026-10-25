@@ -159,6 +159,7 @@ const app = new Hono()
         team: teamsTable,
         student: {
           id: studentsTable.studentId,
+          userId: usersTable.id,
           name: usersTable.name,
           department: studentsTable.department,
           batch: studentsTable.batch,

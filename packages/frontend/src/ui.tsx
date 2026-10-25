@@ -6,11 +6,7 @@ import { Button } from "@festhub/ui/components/button";
 import { Badge } from "@festhub/ui/components/badge";
 import { Skeleton } from "@festhub/ui/components/skeleton";
 import { Input } from "@festhub/ui/components/input";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@festhub/ui/components/avatar";
+import { UploadedAvatar } from "./uploaded-image";
 import { SearchIcon } from "@festhub/ui/icons";
 import { Textarea } from "@festhub/ui/components/textarea";
 import {
@@ -77,7 +73,7 @@ export function Section({
   children,
   plain = false,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
@@ -129,25 +125,12 @@ export function SearchInput({
 
 export function PersonAvatar({
   name,
-  image,
+  imageId,
 }: {
   name: string;
-  image?: string | null;
+  imageId?: string | null;
 }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("");
-  return (
-    <Avatar className="size-10 shrink-0">
-      <AvatarImage src={image ?? undefined} alt={name} />
-      <AvatarFallback className="text-xs font-semibold uppercase">
-        {initials}
-      </AvatarFallback>
-    </Avatar>
-  );
+  return <UploadedAvatar name={name} imageId={imageId} />;
 }
 export function ResourceContent({
   resource,

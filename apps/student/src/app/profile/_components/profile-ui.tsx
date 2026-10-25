@@ -12,7 +12,7 @@ export function ProfileSection({
   action,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
@@ -20,8 +20,8 @@ export function ProfileSection({
   return (
     <section className="min-w-0 rounded-md border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <div className="min-w-0 space-y-1">
+          <h2 className="break-words text-lg font-semibold tracking-tight">{title}</h2>
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}

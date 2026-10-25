@@ -33,6 +33,7 @@ import {
   UsersIcon,
 } from "@festhub/ui/icons";
 import { SignOutButton, useAuthContext, type AuthUser } from "./auth";
+import { UploadedAvatar } from "./uploaded-image";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboardIcon },
@@ -93,11 +94,7 @@ export function StaffShell({
   children,
 }: PropsWithChildren<{ role: "teacher" | "admin" }>) {
   const auth = useAuthContext();
-  if (
-    auth.status !== "authenticated" ||
-    !auth.user ||
-    auth.user.role !== role
-  )
+  if (auth.status !== "authenticated" || !auth.user || auth.user.role !== role)
     return children;
   return (
     <TooltipProvider>
@@ -130,7 +127,9 @@ function DashboardHeader({ role }: { role: "teacher" | "admin" }) {
         <span className="hidden capitalize sm:inline">{role}</span>{" "}
         <span className="hidden px-2 sm:inline">/</span>
         <span className="font-medium text-foreground">
-          {item?.label ?? "Dashboard"}
+          {pathname === "/dashboard/profile"
+            ? "My profile"
+            : (item?.label ?? "Dashboard")}
         </span>
       </p>
       <div className="ml-auto">
@@ -151,14 +150,6 @@ function StaffNavigation({
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
   const closeMobile = () => setOpenMobile(false);
-  const initials =
-    user.name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase() || "F";
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader
@@ -230,11 +221,22 @@ function StaffNavigation({
       <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={user.name}>
-              <Link href="/dashboard" onClick={closeMobile}>
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-semibold text-secondary-foreground">
-                  {initials}
-                </span>
+            <SidebarMenuButton
+              asChild
+              size="lg"
+              tooltip="My profile"
+              isActive={pathname === "/dashboard/profile"}
+            >
+              <Link
+                href="/dashboard/profile"
+                onClick={closeMobile}
+                aria-label="My profile"
+              >
+                <UploadedAvatar
+                  imageId={user.displayImageId}
+                  name={user.name}
+                  className="size-8"
+                />
                 <span className="grid min-w-0 gap-0.5 group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
