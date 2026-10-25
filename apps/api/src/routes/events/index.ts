@@ -102,6 +102,10 @@ const app = new Hono<{ Variables: Variables }>()
         endsAt: eventsTable.endsAt,
         isActive: eventsTable.isActive,
         volunteerRegistration: eventsTable.volunteerRegistration,
+        volunteerStartsAt: eventsTable.volunteerStartsAt,
+        volunteerEndsAt: eventsTable.volunteerEndsAt,
+        registrationOpensAt: eventsTable.registrationOpensAt,
+        registrationClosesAt: eventsTable.registrationClosesAt,
         description: sql<string>`LEFT(${eventsTable.description}, 200)`,
         thumbnailId: eventsTable.thumbnailId,
         venue: {
