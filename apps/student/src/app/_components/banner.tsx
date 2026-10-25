@@ -47,7 +47,7 @@ const Banner = ({
                 onChange={(event) => onSearch(event.target.value)}
                 aria-label="Search events"
                 className="font-medium"
-                placeholder="Search events, keywords, categories etc"
+                placeholder="Find contests, workshops and more"
               />
             </InputGroup>
           </div>

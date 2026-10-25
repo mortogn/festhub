@@ -34,9 +34,10 @@ const SlideCard: React.FC<{
   className?: string;
 }> = ({ text, icon, className }) => {
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "absolute mt-3 top-0 right-0 py-1 px-3 z-20 bg-secondary text-secondary-foreground shadow-md border border-border flex items-center  rounded-l-full group",
+        "absolute mt-3 cursor-default top-0 right-0 py-1 px-3 z-20 bg-secondary text-secondary-foreground shadow-md border-r border-t border-b border-border flex items-center rounded-l-full group motion-reduce:transition-none",
         className,
       )}
     >
@@ -44,7 +45,7 @@ const SlideCard: React.FC<{
       <span className="text-xs font-medium font-mono tracking-tight ml-0 opacity-0 text-nowrap overflow-hidden max-w-0 group-hover:max-w-100 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-300 ease-in-out">
         {text}
       </span>
-    </div>
+    </button>
   );
 };
 
