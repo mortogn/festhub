@@ -76,7 +76,7 @@ export const app = new Hono()
             id: teachersTable.userId,
             teacherId: teachersTable.teacherId,
             name: usersTable.name,
-            displayImage: usersTable.displayImage,
+            displayImageId: usersTable.displayImageId,
             email: usersTable.email,
           })
           .from(organizersTable)

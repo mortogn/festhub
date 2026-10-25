@@ -1,4 +1,5 @@
 import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { uploadsTable } from "./uploads.js";
 
 export const venuesTable = pgTable("venues", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -16,6 +17,8 @@ export const venuesTable = pgTable("venues", {
     .notNull()
     .defaultNow()
     .$onUpdateFn(() => new Date()),
+
+  thumbnailId: uuid("thumbnail_id").references(() => uploadsTable.id),
 });
 
 export type VenueSelect = typeof venuesTable.$inferSelect;

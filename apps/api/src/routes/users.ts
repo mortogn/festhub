@@ -12,7 +12,7 @@ const app = new Hono().get("/self", enforceAuthMiddleware(), async (c) => {
     .select({
       id: usersTable.id,
       email: usersTable.email,
-      displayImage: usersTable.displayImage,
+      displayImageId: usersTable.displayImageId,
       role: usersTable.role,
       name: usersTable.name,
     })

@@ -7,6 +7,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { venuesTable } from "./venues.js";
+import { uploadsTable } from "./uploads.js";
 
 export const eventsTable = pgTable("events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -44,8 +45,8 @@ export const eventsTable = pgTable("events", {
   minTeamSize: integer("min_team_size"),
   maxTeams: integer("max_teams"),
 
-  thumbnail: text("thumbnail"),
-  banner: text("banner"),
+  thumbnailId: uuid("thumbnail_id").references(() => uploadsTable.id),
+  bannerId: uuid("banner_id").references(() => uploadsTable.id),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

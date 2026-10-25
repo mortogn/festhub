@@ -29,7 +29,7 @@ const app = new Hono()
           member: {
             id: usersTable.id,
             email: usersTable.email,
-            displayImage: usersTable.displayImage,
+            displayImageId: usersTable.displayImageId,
             department: studentsTable.department,
             batch: studentsTable.batch,
             studentId: studentsTable.studentId,

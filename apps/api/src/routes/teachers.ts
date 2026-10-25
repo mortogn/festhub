@@ -64,7 +64,7 @@ export const app = new Hono()
       .select({
         id: usersTable.id,
         email: usersTable.email,
-        displayImage: usersTable.displayImage,
+        displayImageId: usersTable.displayImageId,
         createdAt: usersTable.createdAt,
         department: teachersTable.department,
         teacherId: teachersTable.teacherId,
@@ -100,11 +100,11 @@ export const app = new Hono()
 
       const teacherMap = new Map<
         TeacherSelect["userId"],
-        Pick<UserSelect, "email" | "displayImage" | "createdAt"> &
+        Pick<UserSelect, "email" | "displayImageId" | "createdAt"> &
           Pick<TeacherSelect, "department" | "teacherId"> & {
             organizedEvents: Pick<
               EventSelect,
-              "id" | "title" | "startsAt" | "endsAt" | "thumbnail"
+              "id" | "title" | "startsAt" | "endsAt" | "thumbnailId"
             >[];
           }
       >();
@@ -116,7 +116,7 @@ export const app = new Hono()
           item = {
             email: user.email,
             createdAt: user.createdAt,
-            displayImage: user.displayImage,
+            displayImageId: user.displayImageId,
             department: teacher.department,
             teacherId: teacher.teacherId,
             organizedEvents: [],
@@ -131,7 +131,7 @@ export const app = new Hono()
             title: organizedEvent.title,
             startsAt: organizedEvent.startsAt,
             endsAt: organizedEvent.endsAt,
-            thumbnail: organizedEvent.thumbnail,
+            thumbnailId: organizedEvent.thumbnailId,
           });
         }
       });

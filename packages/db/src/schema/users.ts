@@ -5,7 +5,9 @@ import {
   timestamp,
   uuid,
   boolean,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { uploadsTable } from "./uploads.js";
 
 export const usersTable = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
@@ -13,7 +15,10 @@ export const usersTable = pgTable("users", {
   email: text().notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: ["student", "teacher", "admin"] }).notNull(),
-  displayImage: text("display_image"),
+  displayImageId: uuid("display_image_id").references(
+    (): AnyPgColumn => uploadsTable.id,
+    { onDelete: "set null" },
+  ),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

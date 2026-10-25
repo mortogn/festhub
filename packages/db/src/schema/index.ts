@@ -7,3 +7,4 @@ export * from "./venues.js";
 export * from "./organizers.js";
 export * from "./refresh-tokens.js";
 export * from "./teacher-invites.js";
+export * from "./uploads.js";

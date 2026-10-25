@@ -6,3 +6,4 @@ export * from "./venues.js";
 export * from "./teacher.js";
 export * from "./participants.js";
 export * from "./teams.js";
+export * from "./upload.js";

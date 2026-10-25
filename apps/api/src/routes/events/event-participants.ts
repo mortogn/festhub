@@ -37,7 +37,7 @@ const app = new Hono()
             batch: studentsTable.batch,
             email: usersTable.email,
             name: usersTable.name,
-            displayImage: usersTable.displayImage,
+            displayImageId: usersTable.displayImageId,
             checkedInAt: participantsTable.checkedInAt,
             registrationStatus: participantsTable.registrationStatus,
           })

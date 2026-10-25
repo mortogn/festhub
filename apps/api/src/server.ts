@@ -19,6 +19,7 @@ import participantsRoute from "./routes/participants.js";
 import teamsRoute from "./routes/teams.js";
 import teamInvitesRoute from "./routes/team-invites.js";
 import usersRoute from "./routes/users.js";
+import uploadRoute from "./routes/upload.js";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -63,6 +64,7 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/teams", teamsRoute)
   .route("/team-invites", teamInvitesRoute)
   .route("/users", usersRoute)
+  .route("/upload", uploadRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {

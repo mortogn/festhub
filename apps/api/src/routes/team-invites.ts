@@ -185,12 +185,12 @@ const app = new Hono()
         leader: {
           studentId: studentsTable.studentId,
           name: usersTable.name,
-          displayImage: usersTable.displayImage,
+          displayImageId: usersTable.displayImageId,
           email: usersTable.email,
         },
         event: {
           title: eventsTable.title,
-          thumbnail: eventsTable.thumbnail,
+          thumbnailId: eventsTable.thumbnailId,
           startsAt: eventsTable.startsAt,
           endsAt: eventsTable.endsAt,
         },

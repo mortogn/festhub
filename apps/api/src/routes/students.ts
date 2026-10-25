@@ -25,7 +25,7 @@ const app = new Hono()
         department: studentsTable.department,
         batch: studentsTable.batch,
         studentId: studentsTable.studentId,
-        displayImage: usersTable.displayImage,
+        displayImageId: usersTable.displayImageId,
         email: usersTable.email,
       })
       .from(studentsTable)
@@ -76,7 +76,7 @@ const app = new Hono()
       const result = {
         id: studentRow.user.id,
         name: studentRow.user.name,
-        displayImage: studentRow.user.displayImage,
+        displayImageId: studentRow.user.displayImageId,
         email: studentRow.user.email,
         studentId: studentRow.student.studentId,
         department: studentRow.student.department,
@@ -87,7 +87,7 @@ const app = new Hono()
                 {
                   id: events.id,
                   title: events.title,
-                  thumbnail: events.thumbnail,
+                  thumbnailId: events.thumbnailId,
                   startsAt: events.startsAt,
                   endsAt: events.endsAt,
                   joinStatus: participants.registrationStatus,
@@ -101,7 +101,7 @@ const app = new Hono()
                 {
                   id: events.id,
                   title: events.title,
-                  thumbnail: events.thumbnail,
+                  thumbnailId: events.thumbnailId,
                   startsAt: events.startsAt,
                   endsAt: events.endsAt,
                   volunteerType:

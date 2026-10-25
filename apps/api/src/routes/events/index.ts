@@ -103,9 +103,11 @@ const app = new Hono<{ Variables: Variables }>()
         isActive: eventsTable.isActive,
         volunteerRegistration: eventsTable.volunteerRegistration,
         description: sql<string>`LEFT(${eventsTable.description}, 200)`,
+        thumbnailId: eventsTable.thumbnailId,
         venue: {
           id: venuesTable.id,
           title: venuesTable.title,
+          thumbnailId: venuesTable.thumbnailId,
         },
       })
       .from(eventsTable)

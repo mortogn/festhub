@@ -1,0 +1,17 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://student.festhub.morto.dev",
+        "https://teacher.festhub.morto.dev",
+        "https://admin.festhub.morto.dev"
+      ],
+      "AllowedMethods": ["GET", "POST"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
