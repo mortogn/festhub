@@ -12,7 +12,7 @@ import {
   usersTable,
   volunteersTable,
 } from "@festhub/db/schema";
-import { and, eq, gt, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { ForbiddenException } from "../../exceptions/forbidden-exception.js";
 
@@ -132,19 +132,7 @@ const app = new Hono()
       const { qrToken } = c.req.valid("json");
       const user = c.var.user;
 
-      const tokenParts = qrToken.split(":");
-
-      if (tokenParts[0] !== "qr" || tokenParts[1] !== "e")
-        throw new BadRequestException("Invalid qr token format");
-
-      const attendanceQrToken = tokenParts[2];
-
-      const isAttendanceQrTokenUUID = z
-        .uuid()
-        .safeParse(attendanceQrToken).success;
-
-      if (!isAttendanceQrTokenUUID || !attendanceQrToken)
-        throw new BadRequestException("Invalid token provided");
+      const attendanceQrToken = verifyAndExtractQrToken(qrToken, "event");
 
       const now = new Date();
 
@@ -162,8 +150,8 @@ const app = new Hono()
           .where(
             and(
               eq(eventsTable.isActive, true),
-              lte(eventsTable.startsAt, now),
-              gt(eventsTable.endsAt, now),
+              lt(eventsTable.registrationOpensAt, now),
+              gt(eventsTable.registrationClosesAt, now),
               eq(eventsTable.attendanceQrToken, attendanceQrToken),
               eq(eventsTable.id, id),
             ),
