@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { InferRequestType, InferResponseType } from "hono";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@festhub/ui/components/button";
 import { Badge } from "@festhub/ui/components/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@festhub/ui/components/tooltip";
 import {
   Select,
   SelectContent,
@@ -45,7 +50,7 @@ import { VolunteerRoster } from "./staff-volunteers";
 import { ImageUpload } from "./image-upload";
 import { UploadedImage } from "./uploaded-image";
 import { DeleteButton } from "./delete-button";
-import { QrCodeIcon } from "@festhub/ui/icons";
+import { QrCodeIcon, RefreshCwIcon, UsersIcon } from "@festhub/ui/icons";
 import { EventAttendanceQr } from "./event-attendance-qr";
 
 type EventRecord = InferResponseType<
@@ -53,6 +58,10 @@ type EventRecord = InferResponseType<
   200
 >;
 type Events = InferResponseType<typeof client.events.$get, 200>;
+type Participants = InferResponseType<
+  (typeof client.events)[":id"]["participants"]["$get"],
+  200
+>;
 type EventUpdate = InferRequestType<
   (typeof client.events)[":id"]["$put"]
 >["json"];
@@ -64,6 +73,56 @@ const eventTypes = ["workshop", "seminar", "contest"].map((value) => ({
 const loadEvents = async () => readResponse(await client.events.$get());
 const loadStudents = async () => readResponse(await client.students.$get());
 const eventHref = (id: string) => `/dashboard/events/${id}`;
+
+function RunningBadge({
+  startsAt,
+  endsAt,
+  className = "",
+}: {
+  startsAt: string;
+  endsAt: string;
+  className?: string;
+}) {
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const update = () => {
+      if (!active) return;
+      clearTimeout(timer);
+      const now = Date.now();
+      const start = Date.parse(startsAt);
+      const end = Date.parse(endsAt);
+      setRunning(start <= now && now < end);
+      const next = now < start ? start : now < end ? end : null;
+      if (next !== null)
+        timer = setTimeout(update, Math.min(next - now, 2_147_483_647));
+    };
+    queueMicrotask(update);
+    window.addEventListener("focus", update);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      window.removeEventListener("focus", update);
+    };
+  }, [startsAt, endsAt]);
+  if (!running) return null;
+  return (
+    <Badge
+      variant="outline"
+      className={`gap-1.5 border-emerald-500/20 bg-background text-emerald-700 dark:text-emerald-400 ${className}`}
+    >
+      <span aria-hidden="true" className="relative flex size-1.5 shrink-0">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none" />
+        <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+      </span>
+      running
+    </Badge>
+  );
+}
+
+const hasAttended = (participant: Participants[number]) =>
+  participant.registrationStatus === "accepted" && !!participant.checkedInAt;
 
 function FilterSelect({
   label,
@@ -118,15 +177,22 @@ function EventCards({
       <div className="grid gap-4 @min-[40rem]:grid-cols-2">
         {events.map((event) => (
           <article
-            className="flex min-w-0 flex-col rounded-xl border bg-card p-4 sm:p-5"
+            className="relative flex min-w-0 flex-col rounded-xl border bg-card p-4 sm:p-5"
             key={event.id}
           >
             {event.thumbnailId && (
-              <UploadedImage
-                imageId={event.thumbnailId}
-                alt={`${event.title} thumbnail`}
-                className="mb-4 aspect-video w-full rounded-lg"
-              />
+              <>
+                <RunningBadge
+                  startsAt={event.startsAt}
+                  endsAt={event.endsAt}
+                  className="absolute top-6 right-6 z-10 sm:top-7 sm:right-7"
+                />
+                <UploadedImage
+                  imageId={event.thumbnailId}
+                  alt={`${event.title} thumbnail`}
+                  className="mb-4 aspect-video w-full rounded-lg"
+                />
+              </>
             )}
             <div className="flex items-start gap-3">
               <div
@@ -160,6 +226,9 @@ function EventCards({
                   eventMetadata={eventMetadata}
                 />
               </div>
+              {!event.thumbnailId && (
+                <RunningBadge startsAt={event.startsAt} endsAt={event.endsAt} />
+              )}
             </div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
               <time dateTime={event.startsAt}>
@@ -568,6 +637,27 @@ export function StaffEventPage({ id }: { id: string }) {
     [id],
   );
   const event = useResource(load);
+  const loadParticipants = useCallback(
+    async () =>
+      readResponse(
+        await client.events[":id"].participants.$get({ param: { id } }),
+      ),
+    [id],
+  );
+  const participants = useResource(loadParticipants);
+  const attendanceCount = participants.isLoading
+    ? "…"
+    : participants.error
+      ? "—"
+      : (participants.data?.filter(hasAttended).length ?? 0);
+  const attendanceLabel = participants.error
+    ? "Attendance count unavailable. Refresh to try again."
+    : "Attendance count";
+  const { retry: refreshParticipants } = participants;
+  useEffect(() => {
+    window.addEventListener("focus", refreshParticipants);
+    return () => window.removeEventListener("focus", refreshParticipants);
+  }, [refreshParticipants]);
   return (
     <div className="space-y-6">
       <Button asChild variant="link" className="px-0">
@@ -580,9 +670,56 @@ export function StaffEventPage({ id }: { id: string }) {
               title={event.data.title}
               description={`${formatDateTime(event.data.startsAt)} – ${formatDateTime(event.data.endsAt)}`}
               action={
-                <StatusBadge
-                  status={event.data.isActive ? "published" : "unpublished"}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="secondary"
+                        tabIndex={0}
+                        aria-label={`${attendanceLabel}: ${attendanceCount}`}
+                        className="h-9 gap-2 px-4 [&>svg]:size-4! outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border bg-background"
+                      >
+                        <UsersIcon
+                          className="size-5"
+                          aria-hidden="true"
+                          strokeWidth={1.5}
+                        />
+                        <span
+                          aria-live="polite"
+                          className="font-mono tabular-nums"
+                        >
+                          {attendanceCount}
+                        </span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>{attendanceLabel}</TooltipContent>
+                  </Tooltip>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={participants.retry}
+                    disabled={participants.isLoading}
+                    aria-label="Refresh attendance count"
+                    className="rounded-full h-9"
+                  >
+                    <RefreshCwIcon
+                      aria-hidden="true"
+                      className={
+                        participants.isLoading
+                          ? "animate-spin motion-reduce:animate-none"
+                          : ""
+                      }
+                    />
+                    <span className="text-xs ml-1 tracking-wide">Refresh</span>
+                  </Button>
+                  <StatusBadge
+                    status={event.data.isActive ? "published" : "unpublished"}
+                  />
+                  <RunningBadge
+                    startsAt={event.data.startsAt}
+                    endsAt={event.data.endsAt}
+                  />
+                </div>
               }
             />
             <Tabs defaultValue="configuration" className="space-y-6">
@@ -642,9 +779,12 @@ export function StaffEventPage({ id }: { id: string }) {
 
               <TabsContent value="registrations">
                 {event.data.teamBased ? (
-                  <TeamRegistrations eventId={id} />
+                  <TeamRegistrations eventId={id} participants={participants} />
                 ) : (
-                  <ParticipantRegistrations event={event.data} />
+                  <ParticipantRegistrations
+                    event={event.data}
+                    participants={participants}
+                  />
                 )}
               </TabsContent>
               <TabsContent value="volunteers">
@@ -1023,20 +1163,20 @@ function EventVenue({
   );
 }
 
-function ParticipantRegistrations({ event }: { event: EventRecord }) {
-  const load = useCallback(
-    async () =>
-      readResponse(
-        await client.events[":id"].participants.$get({
-          param: { id: event.id },
-        }),
-      ),
-    [event.id],
-  );
-  const participants = useResource(load);
+function ParticipantRegistrations({
+  event,
+  participants,
+}: {
+  event: EventRecord;
+  participants: Resource<Participants>;
+}) {
   const [filter, setFilter] = useState("all");
   const filtered = (participants.data ?? []).filter(
-    (item) => filter === "all" || item.registrationStatus === filter,
+    (item) =>
+      filter === "all" ||
+      (filter === "attended"
+        ? hasAttended(item)
+        : item.registrationStatus === filter),
   );
   const [now] = useState(() => Date.now());
   const ended = Date.parse(event.endsAt) <= now;
@@ -1059,6 +1199,7 @@ function ParticipantRegistrations({ event }: { event: EventRecord }) {
             { value: "all", label: "All statuses" },
             { value: "pending", label: "Pending" },
             { value: "accepted", label: "Accepted" },
+            { value: "attended", label: "Attended" },
             { value: "rejected", label: "Rejected" },
           ]}
         />
@@ -1175,7 +1316,13 @@ function ParticipantRegistrations({ event }: { event: EventRecord }) {
   );
 }
 
-function TeamRegistrations({ eventId }: { eventId: string }) {
+function TeamRegistrations({
+  eventId,
+  participants,
+}: {
+  eventId: string;
+  participants: Resource<Participants>;
+}) {
   const load = useCallback(
     async () =>
       readResponse(
@@ -1186,8 +1333,15 @@ function TeamRegistrations({ eventId }: { eventId: string }) {
   const teams = useResource(load);
   const students = useResource(loadStudents);
   const [filter, setFilter] = useState("all");
+  const attendedIds = new Set(
+    (participants.data ?? []).filter(hasAttended).map((person) => person.id),
+  );
   const filtered = (teams.data ?? []).filter(
-    (team) => filter === "all" || team.status === filter,
+    (team) =>
+      filter === "all" ||
+      (filter === "attended"
+        ? team.members.some((member) => member.id && attendedIds.has(member.id))
+        : team.status === filter),
   );
   return (
     <Section
@@ -1204,6 +1358,7 @@ function TeamRegistrations({ eventId }: { eventId: string }) {
             { value: "all", label: "All statuses" },
             { value: "pending", label: "Pending" },
             { value: "accepted", label: "Accepted" },
+            { value: "attended", label: "Attended" },
             { value: "rejected", label: "Rejected" },
           ]}
         />
@@ -1217,7 +1372,19 @@ function TeamRegistrations({ eventId }: { eventId: string }) {
           </Button>
         </div>
       )}
-      <ResourceContent resource={teams}>
+      <ResourceContent
+        resource={{
+          isLoading:
+            teams.isLoading ||
+            (filter === "attended" && participants.isLoading),
+          error:
+            teams.error ?? (filter === "attended" ? participants.error : null),
+          retry: () => {
+            teams.retry();
+            if (filter === "attended") participants.retry();
+          },
+        }}
+      >
         {filtered.length ? (
           <div className="space-y-5">
             {filtered.map((team) => (
@@ -1240,7 +1407,10 @@ function TeamRegistrations({ eventId }: { eventId: string }) {
                 <div className="space-y-3 border-t pt-4">
                   {team.members
                     .filter(
-                      (member) => member.id || member.email || member.studentId,
+                      (member) =>
+                        (member.id || member.email || member.studentId) &&
+                        (filter !== "attended" ||
+                          (member.id && attendedIds.has(member.id))),
                     )
                     .map((member, index) => (
                       <div

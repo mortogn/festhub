@@ -18,6 +18,7 @@ export {
   Trash2Icon,
   QrCodeIcon,
   RotateCwIcon,
+  RefreshCwIcon,
   LogOutIcon,
   ChevronDownIcon,
   CheckCircle2Icon,
