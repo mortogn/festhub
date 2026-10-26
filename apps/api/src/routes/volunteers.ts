@@ -550,6 +550,48 @@ const app = new Hono<{ Variables: Variables }>()
         throw new InternalServerErrorException("Internal server error", err);
       }
     },
+  )
+  .delete(
+    "/:id",
+    enforceAuthMiddleware(["admin", "teacher"]),
+    zValidator("param", z.object({ id: z.uuid() })),
+    zValidator("query", z.object({ eventId: z.uuid() })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { eventId } = c.req.valid("query");
+
+      await db.transaction(async (tx) => {
+        const [volunteer] = await tx
+          .select()
+          .from(volunteersTable)
+          .innerJoin(eventsTable, eq(eventsTable.id, volunteersTable.eventId))
+          .where(
+            and(
+              eq(volunteersTable.eventId, eventId),
+              gt(eventsTable.volunteerStartsAt, new Date()),
+              gt(eventsTable.volunteerEndsAt, new Date()),
+              eq(volunteersTable.studentId, id),
+            ),
+          )
+          .for("update");
+
+        if (!volunteer)
+          throw new BadRequestException(
+            "Either the volunteer does not exists or the volunteer time for an event has already ended",
+          );
+
+        await tx
+          .delete(volunteersTable)
+          .where(
+            and(
+              eq(volunteersTable.studentId, volunteer.volunteers.studentId),
+              eq(volunteersTable.eventId, volunteer.volunteers.eventId),
+            ),
+          );
+      });
+
+      return c.json({ id, status: "deleted" as const });
+    },
   );
 
 export default app;

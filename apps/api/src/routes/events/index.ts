@@ -14,10 +14,22 @@ import {
   teamsTable,
   usersTable,
   venuesTable,
+  volunteersTable,
 } from "@festhub/db/schema";
 import { InternalServerErrorException } from "../../exceptions/internal-server-error-exception.js";
 import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
-import { and, desc, eq, lt, gt, ne, isNotNull, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  lt,
+  gt,
+  ne,
+  isNotNull,
+  sql,
+  count,
+  or,
+} from "drizzle-orm";
 import z from "zod";
 import { NotFoundException } from "../../exceptions/not-found-exception.js";
 import { HTTPException } from "hono/http-exception";
@@ -26,6 +38,7 @@ import { BadRequestException } from "../../exceptions/bad-request-exception.js";
 import eventVenuesRoute from "./event-venues.js";
 import eventParticipantsRoute from "./event-participants.js";
 import eventTeamsRoute from "./event-teams.js";
+import { alias } from "drizzle-orm/pg-core";
 
 const app = new Hono<{ Variables: Variables }>()
   .post(
@@ -60,33 +73,166 @@ const app = new Hono<{ Variables: Variables }>()
       const body = c.req.valid("json");
       const param = c.req.valid("param");
 
-      const [event] = await db
-        .update(eventsTable)
-        .set({
-          title: body.title,
-          description: body.description,
-          type: body.type,
-          startsAt: body.startsAt,
-          endsAt: body.endsAt,
-          registrationOpensAt: body.registrationOpensAt,
-          registrationClosesAt: body.registrationClosesAt,
-          volunteerStartsAt: body.volunteerStartsAt,
-          volunteerEndsAt: body.volunteerEndsAt,
-          maxVolunteers: body.maxVolunteers,
-          isActive: body.isActive,
-          teamBased: body.teamBased,
-          maxTeamSize: body.maxTeamSize,
-          minTeamSize: body.minTeamSize,
-          maxTeams: body.maxTeams,
-          volunteerRegistration: body.volunteerRegistration,
-          maxParticipants: body.maxParticipants,
-        })
-        .where(eq(eventsTable.id, param.id))
-        .returning({ id: eventsTable.id });
+      const event = await db.transaction(async (tx) => {
+        const [event] = await db
+          .select()
+          .from(eventsTable)
+          .where(eq(eventsTable.id, param.id))
+          .for("update");
 
-      if (!event) throw new NotFoundException();
+        if (!event) throw new BadRequestException("Event not found");
 
-      return c.json({ id: event?.id });
+        if (body.teamBased && !event.teamBased) {
+          const [participant] = await tx
+            .select({ count: count() })
+            .from(participantsTable)
+            .where(eq(participantsTable.eventId, event.id))
+            .limit(1);
+
+          if (participant && participant.count > 0)
+            throw new BadRequestException(
+              `The event already has participants, to change the event type to "team based", remove the participants`,
+            );
+        }
+
+        if (
+          "teamBased" in body &&
+          body.teamBased === false &&
+          event.teamBased
+        ) {
+          const [team] = await tx
+            .select({ count: count() })
+            .from(teamsTable)
+            .where(
+              and(
+                eq(teamsTable.eventId, event.id),
+                isNotNull(teamsTable.registeredAt),
+              ),
+            )
+            .limit(1);
+
+          if (team && team.count > 0)
+            throw new BadRequestException(
+              `The event already has teams, to change the event type to "individual, remove the teams`,
+            );
+        }
+
+        if (
+          ("volunteerStartsAt" in body &&
+            event.volunteerStartsAt &&
+            event.volunteerStartsAt !== body.volunteerStartsAt) ||
+          ("volunteerEndsAt" in body &&
+            event.volunteerEndsAt &&
+            event.volunteerEndsAt !== body.volunteerEndsAt)
+        ) {
+          const volunteers = await tx
+            .select()
+            .from(volunteersTable)
+            .where(
+              and(
+                eq(volunteersTable.eventId, event.id),
+                or(
+                  eq(volunteersTable.registrationStatus, "approved"),
+                  eq(volunteersTable.inviteStatus, "accepted"),
+                ),
+              ),
+            );
+
+          if (volunteers && volunteers.length > 0) {
+            const otherEvents = alias(eventsTable, "other_events");
+            const otherVolunteers = alias(volunteersTable, "other_volunteeers");
+
+            const [conflict] = await tx
+              .select({
+                studentName: usersTable.name,
+                studentId: studentsTable.studentId,
+                userId: studentsTable.userId,
+                conflictEventId: otherEvents.id,
+                conflictEventTitle: otherEvents.title,
+              })
+              .from(volunteersTable)
+              .innerJoin(
+                studentsTable,
+                eq(studentsTable.userId, volunteersTable.studentId),
+              )
+              .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+              .innerJoin(
+                otherVolunteers,
+                eq(otherVolunteers.studentId, volunteersTable.studentId),
+              )
+              .innerJoin(
+                otherEvents,
+                eq(otherEvents.id, otherVolunteers.eventId),
+              )
+              .where(
+                and(
+                  eq(volunteersTable.eventId, event.id),
+                  ne(otherEvents.id, event.id),
+
+                  or(
+                    gt(otherEvents.volunteerEndsAt, new Date()),
+                    gt(otherEvents.endsAt, new Date()),
+                  ),
+
+                  lt(
+                    otherEvents.volunteerStartsAt,
+                    otherEvents.volunteerEndsAt,
+                  ),
+                  gt(
+                    otherEvents.volunteerEndsAt,
+                    otherEvents.volunteerStartsAt,
+                  ),
+
+                  or(
+                    eq(otherVolunteers.registrationStatus, "approved"),
+                    eq(otherVolunteers.inviteStatus, "accepted"),
+                  ),
+                ),
+              )
+              .limit(1);
+
+            if (conflict)
+              throw new BadRequestException(`
+                Volunteer ${conflict.studentName} (ID: ${conflict.studentId}) has a schedule conflict
+                with Event: ${conflict.conflictEventTitle} (ID: ${conflict.conflictEventId}),
+                Can not update event until the schedule conflict is solved
+              `);
+          }
+        }
+
+        const [updatedEvent] = await tx
+          .update(eventsTable)
+          .set({
+            title: body.title,
+            description: body.description,
+            type: body.type,
+            startsAt: body.startsAt,
+            endsAt: body.endsAt,
+            registrationOpensAt: body.registrationOpensAt,
+            registrationClosesAt: body.registrationClosesAt,
+            volunteerStartsAt: body.volunteerStartsAt,
+            volunteerEndsAt: body.volunteerEndsAt,
+            maxVolunteers: body.maxVolunteers,
+            isActive: body.isActive,
+            teamBased: body.teamBased,
+            maxTeamSize: body.maxTeamSize,
+            minTeamSize: body.minTeamSize,
+            maxTeams: body.maxTeams,
+            volunteerRegistration: body.volunteerRegistration,
+            maxParticipants: body.maxParticipants,
+          })
+          .where(eq(eventsTable.id, param.id))
+          .returning({ id: eventsTable.id });
+
+        if (!updatedEvent)
+          throw new InternalServerErrorException(
+            "Something went wrong updating the event, please try again later",
+          );
+
+        return updatedEvent;
+      });
+
+      return c.json({ id: event.id });
     },
   )
   .get("/", async (c) => {

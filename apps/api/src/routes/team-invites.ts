@@ -89,28 +89,6 @@ const app = new Hono()
           ),
         );
 
-        // const [team] = await tx
-        //   .select({
-        //     id: teamsTable.id,
-        //     eventId: teamsTable.eventId,
-        //     maxTeamSize: eventsTable.maxTeamSize,
-        //     totalMember: sql<number>`count(${teamInvitationsTable.id})::int + 1`,
-        //     leaderId: teamsTable.leaderId,
-        //   })
-        //   .from(teamsTable)
-        //   .innerJoin(eventsTable, eq(eventsTable.id, teamsTable.eventId))
-        //   .leftJoin(
-        //     teamInvitationsTable,
-        //     and(
-        //       eq(teamInvitationsTable.teamId, teamsTable.id),
-        //       eq(teamInvitationsTable.status, "accepted"),
-        //     ),
-        //   )
-        //   .where(
-        //     and(eq(teamsTable.id, teamId), gt(eventsTable.endsAt, new Date())),
-        //   )
-        //   .groupBy(teamsTable.id, eventsTable.id);
-
         if (event.maxTeamSize && totalTeamMembers >= event.maxTeamSize)
           throw new BadRequestException(
             `Your team already have maximum number of allowed members of ${totalTeamMembers}`,
@@ -182,6 +160,8 @@ const app = new Hono()
         teamName: teamsTable.name,
         teamId: teamsTable.id,
         status: teamInvitationsTable.status,
+        removedAt: teamInvitationsTable.removedAt,
+        acceptedAt: teamInvitationsTable.acceptedAt,
         leader: {
           studentId: studentsTable.studentId,
           name: usersTable.name,
@@ -236,6 +216,23 @@ const app = new Hono()
         if (!invite)
           throw new BadRequestException(
             "Can not accept as the invitation is not valid",
+          );
+
+        // lock teams table for stable member count
+        const [lockedTeam] = await tx
+          .select()
+          .from(teamsTable)
+          .where(
+            and(
+              eq(teamsTable.id, invite.teams.id),
+              isNull(teamsTable.registeredAt),
+            ),
+          )
+          .for("update");
+
+        if (!lockedTeam)
+          throw new BadRequestException(
+            "Can not accept team invites as the team is already registered ",
           );
 
         if (action === "accepted") {
@@ -300,6 +297,11 @@ const app = new Hono()
             ),
           )
           .returning();
+
+        if (!updatedInvite)
+          throw new BadRequestException(
+            "Could not update team invite, try again if you have not accepted the invite already",
+          );
 
         if (action === "accepted") {
           const [participant] = await tx

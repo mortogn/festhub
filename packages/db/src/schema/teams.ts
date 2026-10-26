@@ -27,7 +27,7 @@ export const teamInvitationsTable = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     teamId: uuid("team_id")
       .notNull()
-      .references(() => teamsTable.id),
+      .references(() => teamsTable.id, { onDelete: "cascade" }),
     studentId: uuid("student_id")
       .notNull()
       .references(() => studentsTable.userId),
@@ -36,6 +36,8 @@ export const teamInvitationsTable = pgTable(
 
     invitedAt: timestamp("invited_at", { withTimezone: true }).defaultNow(),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+
+    removedAt: timestamp("removed_at", { withTimezone: true }),
   },
   (table) => [unique().on(table.teamId, table.studentId)],
 );

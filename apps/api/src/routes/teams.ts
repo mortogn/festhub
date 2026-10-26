@@ -78,26 +78,12 @@ const app = new Hono()
             id: teamsTable.id,
             name: teamsTable.name,
           })
-          .from(teamsTable)
-          .leftJoin(
-            participantsTable,
-            eq(participantsTable.teamId, teamsTable.id),
-          )
-          .leftJoin(
-            teamInvitationsTable,
-            eq(teamInvitationsTable.teamId, teamsTable.id),
-          )
+          .from(participantsTable)
+          .leftJoin(teamsTable, eq(teamsTable.id, participantsTable.teamId))
           .where(
             and(
               eq(teamsTable.eventId, event.id),
-              or(
-                eq(participantsTable.studentId, user.id),
-                and(
-                  eq(teamInvitationsTable.status, "accepted"),
-                  eq(teamInvitationsTable.studentId, user.id),
-                ),
-                eq(teamsTable.leaderId, user.id),
-              ),
+              eq(participantsTable.studentId, user.id),
             ),
           );
 
@@ -311,6 +297,110 @@ const app = new Hono()
       });
 
       return c.json(submittedTeam);
+    },
+  )
+  .delete(
+    "/:id",
+    enforceAuthMiddleware(["student"]),
+    zValidator("param", z.object({ id: z.uuid() })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const user = c.var.user;
+
+      await db.transaction(async (tx) => {
+        const [team] = await tx
+          .select()
+          .from(teamsTable)
+          .where(
+            and(
+              isNull(teamsTable.registeredAt),
+              eq(teamsTable.leaderId, user.id),
+              eq(teamsTable.id, id),
+            ),
+          )
+          .for("update");
+
+        if (!team)
+          throw new BadRequestException(
+            "You can only delete the team that you created and is not registered for an event",
+          );
+
+        await tx
+          .delete(teamsTable)
+          .where(
+            and(eq(teamsTable.id, id), eq(teamsTable.leaderId, team.leaderId)),
+          );
+      });
+
+      return c.json({ id: id, status: "deleted" as const });
+    },
+  )
+  .delete(
+    "/:id/member",
+    enforceAuthMiddleware(["student"]),
+    zValidator("param", z.object({ id: z.uuid() })),
+    zValidator("query", z.object({ memberId: z.uuid() })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { memberId } = c.req.valid("query");
+
+      const user = c.var.user;
+
+      await db.transaction(async (tx) => {
+        const [team] = await tx
+          .select()
+          .from(teamsTable)
+          .where(
+            and(
+              eq(teamsTable.id, id),
+              eq(teamsTable.leaderId, user.id),
+              isNull(teamsTable.registeredAt),
+            ),
+          )
+          .for("update");
+
+        if (!team)
+          throw new BadRequestException(
+            "You can only delete members of the team that you created and is not registered for an event",
+          );
+
+        if (memberId === team.leaderId)
+          throw new BadRequestException("Leader can not remove themselves");
+
+        const [member] = await tx
+          .select()
+          .from(participantsTable)
+          .where(
+            and(
+              eq(participantsTable.studentId, memberId),
+              eq(participantsTable.teamId, team.id),
+            ),
+          );
+
+        if (!member)
+          throw new BadRequestException("Student is not a part of the team");
+
+        await tx
+          .update(teamInvitationsTable)
+          .set({ removedAt: new Date() })
+          .where(
+            and(
+              eq(teamInvitationsTable.teamId, team.id),
+              eq(teamInvitationsTable.studentId, memberId),
+            ),
+          );
+
+        await tx
+          .delete(participantsTable)
+          .where(
+            and(
+              eq(participantsTable.studentId, member.studentId),
+              eq(participantsTable.teamId, id),
+            ),
+          );
+      });
+
+      return c.json({ memberId: memberId, status: "deleted" as const });
     },
   );
 
