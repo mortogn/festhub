@@ -48,7 +48,7 @@ const app = new Hono<{ Variables: Variables }>()
     "*",
     cors({
       origin: allowedOrigins,
-      allowMethods: ["GET", "POST", "PATCH", "PUT"],
+      allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
       credentials: true,
     }),
   )
