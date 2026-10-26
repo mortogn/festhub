@@ -16,4 +16,13 @@ export {
   GraduationCapIcon,
   ArrowUpRightIcon,
   Trash2Icon,
+  QrCodeIcon,
+  RotateCwIcon,
+  LogOutIcon,
+  ChevronDownIcon,
+  CheckCircle2Icon,
+  CopyIcon,
+  DownloadIcon,
+  CameraIcon,
+  CameraOffIcon,
 } from "lucide-react";

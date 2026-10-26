@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { Button } from "@festhub/ui/components/button";
 import SignUpForm from "./_form";
+import { authRedirect } from "@/lib/auth-redirect";
+import { Suspense } from "react";
 
-export default function SignUp() {
+type Props = { searchParams: Promise<{ next?: string | string[] }> };
+
+async function SignUpContent({ searchParams }: Props) {
+  const returnTo = authRedirect((await searchParams).next);
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 space-y-2">
@@ -14,14 +19,22 @@ export default function SignUp() {
         </p>
       </div>
 
-      <SignUpForm />
+      <SignUpForm returnTo={returnTo} />
 
       <p className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Button variant="link" asChild>
-          <Link href="/sign-in">Sign in</Link>
+          <Link href={returnTo === "/" ? "/sign-in" : `/sign-in?next=${encodeURIComponent(returnTo)}`}>Sign in</Link>
         </Button>
       </p>
     </div>
+  );
+}
+
+export default function SignUp(props: Props) {
+  return (
+    <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Loading sign up…</p>}>
+      <SignUpContent {...props} />
+    </Suspense>
   );
 }

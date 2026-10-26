@@ -45,6 +45,8 @@ import { VolunteerRoster } from "./staff-volunteers";
 import { ImageUpload } from "./image-upload";
 import { UploadedImage } from "./uploaded-image";
 import { DeleteButton } from "./delete-button";
+import { QrCodeIcon } from "@festhub/ui/icons";
+import { EventAttendanceQr } from "./event-attendance-qr";
 
 type EventRecord = InferResponseType<
   (typeof client.events)[":id"]["$get"],
@@ -177,9 +179,18 @@ function EventCards({
                   status={event.isActive ? "published" : "unpublished"}
                 />
               )}
-              <Button asChild variant="outline" size="sm" className="ml-auto">
-                <Link href={eventHref(event.id)}>Manage event</Link>
-              </Button>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <EventAttendanceQr eventId={event.id} title={event.title} />
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`${eventHref(event.id)}/attendance`}>
+                    <QrCodeIcon aria-hidden="true" />
+                    Scan Students
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={eventHref(event.id)}>Manage event</Link>
+                </Button>
+              </div>
             </div>
           </article>
         ))}

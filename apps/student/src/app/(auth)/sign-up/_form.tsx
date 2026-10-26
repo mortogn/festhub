@@ -75,7 +75,7 @@ const fields = [
   },
 ] as const;
 
-export default function SignUpForm() {
+export default function SignUpForm({ returnTo = "/" }: { returnTo?: string }) {
   const { retry: refreshUser } = useAuthContext();
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
@@ -115,7 +115,7 @@ export default function SignUpForm() {
       }
 
       refreshUser();
-      router.push("/");
+      router.push(returnTo);
     } catch {
       form.setError("root", {
         message: "Could not connect. Check your connection and try again.",

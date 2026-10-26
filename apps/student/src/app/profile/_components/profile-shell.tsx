@@ -22,14 +22,7 @@ import {
 } from "@festhub/ui/components/sidebar";
 import { Skeleton } from "@festhub/ui/components/skeleton";
 import { TooltipProvider } from "@festhub/ui/components/tooltip";
-import {
-  ArrowLeft,
-  LayoutDashboardIcon,
-  HandHeartIcon,
-  MailIcon,
-  UserRoundIcon,
-  UsersIcon,
-} from "@festhub/ui/icons";
+import { ArrowLeft } from "@festhub/ui/icons";
 import Link from "next/link";
 import { SignOutButton } from "@festhub/frontend/auth";
 import Image from "next/image";
@@ -39,14 +32,7 @@ import { ProfileDataProvider } from "./profile-data";
 import { useStudentData } from "@/context/student-data-context";
 import InvitationNotifications from "@/components/invitation-notifications";
 import { UploadedAvatar } from "@festhub/frontend/uploaded-image";
-
-const navigation = [
-  { title: "Overview", href: "/profile", icon: LayoutDashboardIcon },
-  { title: "Profile", href: "/profile/account", icon: UserRoundIcon },
-  { title: "Volunteering", href: "/profile/volunteering", icon: HandHeartIcon },
-  { title: "My teams", href: "/profile/teams", icon: UsersIcon },
-  { title: "Team invitations", href: "/profile/team-invites", icon: MailIcon },
-];
+import { profileNavigation as navigation } from "@/components/profile-navigation";
 
 function ProfileSidebar({ user }: { user: AuthUser }) {
   const pathname = usePathname();

@@ -25,7 +25,7 @@ import { KeyIcon, MailIcon } from "@festhub/ui/icons";
 
 type FormValues = z.infer<typeof signInSchema>;
 
-const SignInForm: React.FC = () => {
+const SignInForm: React.FC<{ returnTo?: string }> = ({ returnTo = "/" }) => {
   const { retry: refreshUser } = useAuthContext();
   const form = useForm<FormValues>({
     resolver: zodResolver(signInSchema),
@@ -56,7 +56,7 @@ const SignInForm: React.FC = () => {
       }
 
       refreshUser();
-      router.push("/");
+      router.push(returnTo);
     } catch {
       form.setError("root", {
         message: "Could not connect. Check your connection and try again.",
