@@ -12,7 +12,7 @@ import {
   usersTable,
   volunteersTable,
 } from "@festhub/db/schema";
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { ForbiddenException } from "../../exceptions/forbidden-exception.js";
 
@@ -76,6 +76,31 @@ const app = new Hono()
       });
 
       return c.json({ attendanceQrToken: `qr:e:${qrToken}` });
+    },
+  )
+  .get(
+    "/",
+    enforceAuthMiddleware(["admin", "teacher"]),
+    zValidator("param", z.object({ id: z.uuid() })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const [participants] = await db
+        .select({
+          participant: participantsTable,
+          team: teamsTable,
+        })
+        .from(participantsTable)
+        .leftJoin(teamsTable, eq(teamsTable.id, participantsTable.teamId))
+        .where(
+          and(
+            eq(participantsTable.eventId, id),
+            eq(participantsTable.registrationStatus, "accepted"),
+            isNotNull(participantsTable.checkedInAt),
+          ),
+        );
+
+      return c.json(participants);
     },
   )
   .put(
