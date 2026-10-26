@@ -323,6 +323,7 @@ export function Editor({
   onSubmit,
   submitLabel = "Save changes",
   successMessage = "Saved successfully.",
+  persistentErrors = false,
 }: {
   title?: string;
   fields: FieldSpec[];
@@ -330,6 +331,7 @@ export function Editor({
   onSubmit: (values: Record<string, string>) => Promise<void>;
   submitLabel?: string;
   successMessage?: string;
+  persistentErrors?: boolean;
 }) {
   const toastFeedback = useToastFeedback();
   const prefix = useId();
@@ -373,7 +375,7 @@ export function Editor({
           if (toastFeedback) toast.success(successMessage);
           else setSuccess(true);
         } catch (error) {
-          if (toastFeedback) toast.error(errorMessage(error));
+          if (toastFeedback && !persistentErrors) toast.error(errorMessage(error));
           else setError(errorMessage(error));
         } finally {
           setPending(false);
@@ -477,7 +479,11 @@ export function Editor({
           Bangladesh time (UTC+06:00)
         </p>
       )}
-      {error && <FieldError role="alert">{error}</FieldError>}
+      {error && (
+        <FieldError role="alert" className="min-w-0 whitespace-pre-line break-words">
+          {error}
+        </FieldError>
+      )}
       {success && (
         <p role="status" className="text-sm text-muted-foreground">
           {successMessage}

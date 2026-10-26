@@ -44,6 +44,7 @@ import {
 import { VolunteerRoster } from "./staff-volunteers";
 import { ImageUpload } from "./image-upload";
 import { UploadedImage } from "./uploaded-image";
+import { DeleteButton } from "./delete-button";
 
 type EventRecord = InferResponseType<
   (typeof client.events)[":id"]["$get"],
@@ -828,6 +829,7 @@ function EventConfiguration({
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <Section title="Event details">
           <Editor
+            persistentErrors
             fields={[
               ...generalFields,
               {
@@ -847,6 +849,7 @@ function EventConfiguration({
           description="Set both opening and closing dates to allow individual registration."
         >
           <Editor
+            persistentErrors
             fields={registrationFields}
             initialValues={initialValues}
             onSubmit={save}
@@ -858,6 +861,7 @@ function EventConfiguration({
           description="Set both duty timestamps before inviting or approving volunteers."
         >
           <Editor
+            persistentErrors
             fields={[
               {
                 name: "volunteerRegistration",
@@ -1075,6 +1079,21 @@ function ParticipantRegistrations({ event }: { event: EventRecord }) {
                       {participant.email}
                     </p>
                   </div>
+                  <DeleteButton
+                    label={`Remove ${participant.name} from ${event.title}`}
+                    title="Remove this participant?"
+                    description={`Are you sure you want to remove ${participant.name} from ${event.title}? Their registration and check-in record for this event will be permanently deleted. This action cannot be reversed.`}
+                    action={async () =>
+                      readResponse(
+                        await client.participants[":id"].$delete({
+                          param: { id: participant.id },
+                          query: { eventId: event.id },
+                        }),
+                      )
+                    }
+                    onSuccess={participants.retry}
+                    successMessage={`${participant.name} removed from ${event.title}.`}
+                  />
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-muted-foreground">

@@ -97,6 +97,7 @@ const statuses: Record<string, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
   pending: { label: "Pending", className: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
   rejected: { label: "Rejected", className: "bg-destructive/10 text-destructive" },
+  removed: { label: "Removed", className: "bg-destructive/10 text-destructive" },
   draft: { label: "Draft", className: "bg-secondary text-secondary-foreground" },
 };
 

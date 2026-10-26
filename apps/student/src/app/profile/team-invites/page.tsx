@@ -51,7 +51,9 @@ export default function ProfileInvitesPage() {
                 key={invite.id}
                 title={invite.teamName}
                 description={invite.event.title}
-                action={<StatusBadge status={invite.status} />}
+                action={
+                  <StatusBadge status={invite.removedAt ? "removed" : invite.status} />
+                }
               >
                 <div className="space-y-5">
                   <EventDates
@@ -80,7 +82,16 @@ export default function ProfileInvitesPage() {
                       </p>
                     </div>
                   </div>
-                  {invite.status === "pending" && (
+                  {invite.removedAt && (
+                    <div className="space-y-1 rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm">
+                      <p className="font-medium">You were removed from this team.</p>
+                      <p className="text-muted-foreground">
+                        Removed {formatDateTime(invite.removedAt)}. You cannot
+                        be invited back or rejoin this team.
+                      </p>
+                    </div>
+                  )}
+                  {!invite.removedAt && invite.status === "pending" && (
                     <div className="flex flex-wrap gap-3">
                       {(["accepted", "rejected"] as const).map((action) => (
                         <MutationButton
@@ -107,6 +118,11 @@ export default function ProfileInvitesPage() {
                       ? `Invited ${formatDateTime(invite.invitedAt)}`
                       : "Invitation date unavailable"}
                   </p>
+                  {invite.acceptedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Invitation accepted {formatDateTime(invite.acceptedAt)}
+                    </p>
+                  )}
                 </div>
               </ProfileSection>
             ))}

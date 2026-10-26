@@ -17,6 +17,10 @@ import { getTeamMembers, getTeamStatus } from "../../_components/profile-utils";
 import { Button } from "@festhub/ui/components/button";
 import { z } from "zod";
 import { TeamInviteDialog } from "../_components/team-invite-dialog";
+import {
+  DeleteTeamButton,
+  RemoveTeamMemberButton,
+} from "../_components/team-delete-buttons";
 import { ArrowLeft } from "@festhub/ui/icons";
 
 export default function TeamDetails({ teamId }: { teamId: string }) {
@@ -89,7 +93,12 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
         <PageHeading
           title={team.name}
           description={item.event?.title ?? "Event unavailable"}
-          action={<StatusBadge status={getTeamStatus(team)} />}
+          action={
+            <div className="flex items-center gap-2">
+              <StatusBadge status={getTeamStatus(team)} />
+              <DeleteTeamButton team={team} redirectAfterDelete />
+            </div>
+          }
         />
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -119,7 +128,7 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
                   name={member.name || "Member"}
                   className="size-9"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">
                     {member.name ?? "Member"}
                     {member.id === student.data?.studentId && " (You)"}
@@ -129,6 +138,7 @@ export default function TeamDetails({ teamId }: { teamId: string }) {
                     {member.batch && ` · Batch ${member.batch}`}
                   </p>
                 </div>
+                <RemoveTeamMemberButton team={team} member={member} />
               </li>
             ))}
           </ul>

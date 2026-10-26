@@ -58,18 +58,60 @@ type Success<R extends Response> = Exclude<
   { success: false }
 >;
 
+function responseErrorMessage(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  if (
+    "message" in data &&
+    typeof data.message === "string" &&
+    data.message.trim()
+  )
+    return data.message.replace(/\s+/g, " ").trim();
+
+  // Hono's Zod validator returns { success: false, error: { issues: [...] } }.
+  const error = "error" in data ? data.error : null;
+  if (
+    error &&
+    typeof error === "object" &&
+    "issues" in error &&
+    Array.isArray(error.issues)
+  ) {
+    const messages = error.issues.flatMap((issue: unknown) => {
+      if (
+        !issue ||
+        typeof issue !== "object" ||
+        !("message" in issue) ||
+        typeof issue.message !== "string"
+      )
+        return [];
+      const path =
+        "path" in issue && Array.isArray(issue.path)
+          ? issue.path
+              .filter(
+                (part: unknown) =>
+                  typeof part === "string" || typeof part === "number",
+              )
+              .join(".")
+          : "";
+      const label = path.replace(/([a-z])([A-Z])/g, "$1 $2");
+      return [
+        label
+          ? `${label[0]!.toUpperCase()}${label.slice(1)}: ${issue.message}`
+          : issue.message,
+      ];
+    });
+    if (messages.length) return [...new Set(messages)].join("\n");
+  }
+  return null;
+}
+
 export async function readResponse<R extends Response>(
   response: R,
 ): Promise<Success<R>> {
   if (!response.ok) {
     const data: unknown = await response.json().catch(() => null);
     const message =
-      data &&
-      typeof data === "object" &&
-      "message" in data &&
-      typeof data.message === "string"
-        ? data.message
-        : "Unable to complete this request. Please try again.";
+      responseErrorMessage(data) ??
+      "Unable to complete this request. Please try again.";
     if (response.status === 401 && typeof window !== "undefined")
       window.dispatchEvent(new Event("festhub:session-expired"));
     throw new ApiError(message, response.status);

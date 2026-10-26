@@ -14,6 +14,10 @@ import {
 } from "../_components/profile-ui";
 import { getTeamMembers, getTeamStatus } from "../_components/profile-utils";
 import { TeamInviteDialog } from "./_components/team-invite-dialog";
+import {
+  DeleteTeamButton,
+  RemoveTeamMemberButton,
+} from "./_components/team-delete-buttons";
 
 export default function ProfileTeamsPage() {
   const { user, teams } = useProfileData();
@@ -62,7 +66,12 @@ export default function ProfileTeamsPage() {
                     </Link>
                   }
                   description={event?.title ?? "Event unavailable"}
-                  action={<StatusBadge status={getTeamStatus(team)} />}
+                  action={
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={getTeamStatus(team)} />
+                      <DeleteTeamButton team={team} />
+                    </div>
+                  }
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold">
@@ -90,7 +99,7 @@ export default function ProfileTeamsPage() {
                             name={member.name || "Unknown member"}
                             className="size-9"
                           />
-                          <div className="min-w-0 space-y-1">
+                          <div className="min-w-0 flex-1 space-y-1">
                             <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                               <span className="break-words">
                                 {member.name || "Unknown member"}
@@ -112,6 +121,7 @@ export default function ProfileTeamsPage() {
                               {member.batch && ` · Batch ${member.batch}`}
                             </p>
                           </div>
+                          <RemoveTeamMemberButton team={team} member={member} />
                         </li>
                       ))}
                     </ul>

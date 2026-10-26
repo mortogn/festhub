@@ -15,4 +15,5 @@ export {
   LayoutDashboardIcon,
   GraduationCapIcon,
   ArrowUpRightIcon,
+  Trash2Icon,
 } from "lucide-react";

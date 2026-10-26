@@ -31,6 +31,7 @@ import {
 import client, { readResponse } from "./api";
 import { formatDateTime } from "./dates";
 import { useResource } from "./resource";
+import { DeleteButton } from "./delete-button";
 import {
   EmptyState,
   MutationButton,
@@ -159,6 +160,11 @@ function VolunteerCard({
 }) {
   const [now] = useState(() => Date.now());
   const ended = !!event && Date.parse(event.endsAt) <= now;
+  const canDelete =
+    !!event?.volunteerStartsAt &&
+    !!event.volunteerEndsAt &&
+    Date.parse(event.volunteerStartsAt) > now &&
+    Date.parse(event.volunteerEndsAt) > now;
   const canReview = !!row.registeredAt && !confirmed(row) && !!event && !ended;
   const isConfirmed = confirmed(row);
   const initials = row.student.name
@@ -347,6 +353,32 @@ function VolunteerCard({
                     ? "Waiting for the student to respond."
                     : "No application to review."}
           </p>
+        )}
+        {canDelete && (
+          <div className="ml-auto">
+            <DeleteButton
+              label={`Remove ${row.student.name} as a volunteer for ${event.title}`}
+              title="Remove this volunteer?"
+              description={`Are you sure you want to remove ${row.student.name} as a volunteer for ${event.title}? Their application, invitation, and duty record for this event will be permanently deleted. This action cannot be reversed.`}
+              action={async () => {
+                if (
+                  Date.parse(event.volunteerStartsAt!) <= Date.now() ||
+                  Date.parse(event.volunteerEndsAt!) <= Date.now()
+                )
+                  throw new Error(
+                    "Volunteer duty has already started or ended. This volunteer can no longer be removed.",
+                  );
+                return readResponse(
+                  await client.volunteers[":id"].$delete({
+                    param: { id: row.student.id },
+                    query: { eventId: row.eventId },
+                  }),
+                );
+              }}
+              onSuccess={onChange}
+              successMessage={`${row.student.name} removed from the volunteer roster.`}
+            />
+          </div>
         )}
       </div>
     </article>
