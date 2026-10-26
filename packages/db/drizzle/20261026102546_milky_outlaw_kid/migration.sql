@@ -1,0 +1,3 @@
+ALTER TABLE "team_invitations" ADD COLUMN "removed_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "team_invitations" DROP CONSTRAINT "team_invitations_team_id_teams_id_fkey", ADD CONSTRAINT "team_invitations_team_id_teams_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "participants" DROP CONSTRAINT "participants_team_id_teams_id_fkey", ADD CONSTRAINT "participants_team_id_teams_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE;
