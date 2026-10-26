@@ -48,6 +48,8 @@ export const eventsTable = pgTable("events", {
   thumbnailId: uuid("thumbnail_id").references(() => uploadsTable.id),
   bannerId: uuid("banner_id").references(() => uploadsTable.id),
 
+  attendanceQrToken: uuid("attendance_qr_token").unique(),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

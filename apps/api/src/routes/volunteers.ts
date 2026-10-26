@@ -14,18 +14,7 @@ import {
   usersTable,
   volunteersTable,
 } from "@festhub/db/schema";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  lt,
-  or,
-  ne,
-  isNotNull,
-  isNull,
-} from "drizzle-orm";
+import { and, count, desc, eq, gt, lt, or, ne, isNotNull } from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";

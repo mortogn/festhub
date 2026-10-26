@@ -8,13 +8,13 @@ import {
   volunteersTable,
 } from "@festhub/db/schema";
 import { db } from "@festhub/db";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
 import { ForbiddenException } from "../exceptions/forbidden-exception.js";
-import { NotFoundException } from "../exceptions/not-found-exception.js";
-import { alias } from "drizzle-orm/pg-core";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
+import { AuthException } from "../exceptions/auth-exception.js";
+import { randomUUID } from "node:crypto";
 
 const app = new Hono()
   .get("/", enforceAuthMiddleware(["admin", "teacher"]), async (c) => {
@@ -116,6 +116,47 @@ const app = new Hono()
 
       return c.json(result);
     },
-  );
+  )
+  .get("/self/qr", enforceAuthMiddleware(["student"]), async (c) => {
+    const user = c.var.user;
+
+    const qrToken = await db.transaction(async (tx) => {
+      const [student] = await tx
+        .select()
+        .from(studentsTable)
+        .where(eq(studentsTable.userId, user.id))
+        .for("update");
+
+      if (!student) throw new AuthException();
+
+      let qrToken: string;
+
+      if (!student.qrToken) {
+        const token = randomUUID();
+        await tx
+          .update(studentsTable)
+          .set({ qrToken: token })
+          .where(eq(studentsTable.userId, student.userId));
+
+        qrToken = token;
+      } else qrToken = student.qrToken;
+
+      return qrToken;
+    });
+
+    return c.json({ qrToken: `qr:s:${qrToken}` });
+  })
+  .patch("/self/qr/rotate", enforceAuthMiddleware(["student"]), async (c) => {
+    const user = c.var.user;
+
+    const token = randomUUID();
+
+    await db
+      .update(studentsTable)
+      .set({ qrToken: token })
+      .where(eq(studentsTable.userId, user.id));
+
+    return c.json({ qrToken: `qr:s:${token}` });
+  });
 
 export default app;

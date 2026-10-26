@@ -36,6 +36,7 @@ export const studentsTable = pgTable("students", {
   batch: text("batch").notNull(),
   department: text("department").notNull(),
   is_hsc: boolean("is_hsc").notNull().default(false),
+  qrToken: uuid("qr_token").unique(),
 });
 
 export const teachersTable = pgTable("teachers", {

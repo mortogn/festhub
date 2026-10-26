@@ -20,6 +20,7 @@ export const participantsTable = pgTable(
       .references(() => eventsTable.id),
 
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+    checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
 
     teamId: uuid("team_id").references(() => teamsTable.id, {
       onDelete: "cascade",

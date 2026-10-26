@@ -10,7 +10,6 @@ import {
   eventsTable,
   participantsTable,
   studentsTable,
-  TeamSelect,
   teamsTable,
   usersTable,
   venuesTable,
@@ -39,6 +38,8 @@ import { BadRequestException } from "../../exceptions/bad-request-exception.js";
 import eventVenuesRoute from "./event-venues.js";
 import eventParticipantsRoute from "./event-participants.js";
 import eventTeamsRoute from "./event-teams.js";
+import eventQrRoute from "./event-qr.js";
+
 import { alias } from "drizzle-orm/pg-core";
 
 const app = new Hono<{ Variables: Variables }>()
@@ -309,7 +310,9 @@ const app = new Hono<{ Variables: Variables }>()
 
       if (!event) throw new NotFoundException("Event not found");
 
-      return c.json(event);
+      const { attendanceQrToken, ...safeEvent } = event;
+
+      return c.json(safeEvent);
     } catch (err) {
       if (err instanceof HTTPException) throw err;
       throw new InternalServerErrorException("Internal Server Error", err);
@@ -317,6 +320,7 @@ const app = new Hono<{ Variables: Variables }>()
   })
   .route("/", eventVenuesRoute)
   .route("/", eventParticipantsRoute)
-  .route("/", eventTeamsRoute);
+  .route("/", eventTeamsRoute)
+  .route("/:id/attendance", eventQrRoute);
 
 export default app;

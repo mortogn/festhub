@@ -11,17 +11,7 @@ import {
   teamsTable,
   usersTable,
 } from "@festhub/db/schema";
-import {
-  and,
-  count,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  or,
-  lt,
-  isNotNull,
-} from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, or, lt } from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
