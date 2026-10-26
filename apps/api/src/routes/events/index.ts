@@ -29,6 +29,7 @@ import {
   sql,
   count,
   or,
+  isNull,
 } from "drizzle-orm";
 import z from "zod";
 import { NotFoundException } from "../../exceptions/not-found-exception.js";
@@ -74,7 +75,7 @@ const app = new Hono<{ Variables: Variables }>()
       const param = c.req.valid("param");
 
       const event = await db.transaction(async (tx) => {
-        const [event] = await db
+        const [event] = await tx
           .select()
           .from(eventsTable)
           .where(eq(eventsTable.id, param.id))
@@ -100,7 +101,7 @@ const app = new Hono<{ Variables: Variables }>()
           body.teamBased === false &&
           event.teamBased
         ) {
-          const [team] = await tx
+          const [registeredTeam] = await tx
             .select({ count: count() })
             .from(teamsTable)
             .where(
@@ -111,9 +112,18 @@ const app = new Hono<{ Variables: Variables }>()
             )
             .limit(1);
 
-          if (team && team.count > 0)
+          if (registeredTeam && registeredTeam.count > 0)
             throw new BadRequestException(
               `The event already has teams, to change the event type to "individual, remove the teams`,
+            );
+
+          await tx
+            .delete(teamsTable)
+            .where(
+              and(
+                eq(teamsTable.eventId, event.id),
+                isNull(teamsTable.registeredAt),
+              ),
             );
         }
 

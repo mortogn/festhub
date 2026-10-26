@@ -218,6 +218,17 @@ const app = new Hono()
             "Can not accept as the invitation is not valid",
           );
 
+        const [event] = await tx
+          .select()
+          .from(eventsTable)
+          .where(eq(eventsTable.id, invite.teams.eventId))
+          .for("update");
+
+        if (!event)
+          throw new BadRequestException(
+            "Can not accept as the invitation is not valid",
+          );
+
         // lock teams table for stable member count
         const [lockedTeam] = await tx
           .select()
@@ -253,18 +264,11 @@ const app = new Hono()
               "You are already a member in a different team for this event.",
             );
 
-          const [event] = await tx
-            .select()
-            .from(eventsTable)
-            .where(
-              and(
-                gt(eventsTable.registrationClosesAt, new Date()),
-                eq(eventsTable.id, invite.teams.eventId),
-                eq(eventsTable.teamBased, true),
-              ),
-            );
-
-          if (!event)
+          if (
+            !event.teamBased ||
+            (event.registrationClosesAt &&
+              event.registrationClosesAt <= new Date())
+          )
             throw new BadRequestException(
               "Can not accept as the invitation is not valid",
             );

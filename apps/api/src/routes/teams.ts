@@ -11,7 +11,17 @@ import {
   teamsTable,
   usersTable,
 } from "@festhub/db/schema";
-import { and, count, eq, gt, inArray, isNull, or, lt } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  or,
+  lt,
+  isNotNull,
+} from "drizzle-orm";
 import { NotFoundException } from "../exceptions/not-found-exception.js";
 import { BadRequestException } from "../exceptions/bad-request-exception.js";
 import { InternalServerErrorException } from "../exceptions/internal-server-error-exception.js";
@@ -28,13 +38,7 @@ const app = new Hono()
 
       const team = await db.transaction(async (tx) => {
         const [event] = await tx
-          .select({
-            id: eventsTable.id,
-            totalTeam: count(teamsTable.id),
-            maxTeams: eventsTable.maxTeams,
-            registrationOpensAt: eventsTable.registrationOpensAt,
-            registrationClosesAt: eventsTable.registrationClosesAt,
-          })
+          .select()
           .from(eventsTable)
           .where(
             and(
@@ -43,14 +47,7 @@ const app = new Hono()
               eq(eventsTable.teamBased, true),
             ),
           )
-          .leftJoin(
-            teamsTable,
-            and(
-              eq(teamsTable.eventId, eventsTable.id),
-              eq(teamsTable.status, "accepted"),
-            ),
-          )
-          .groupBy(eventsTable.id);
+          .for("update");
 
         if (!event)
           throw new NotFoundException(
@@ -68,7 +65,15 @@ const app = new Hono()
             "Event registration has already been closed",
           );
 
-        if (event.maxTeams && event.totalTeam >= event.maxTeams)
+        const totalTeams = await tx.$count(
+          teamsTable,
+          and(
+            eq(teamsTable.eventId, event.id),
+            eq(teamsTable.status, "accepted"),
+          ),
+        );
+
+        if (event.maxTeams && totalTeams >= event.maxTeams)
           throw new BadRequestException(
             "Event has already reached maximum team capacity",
           );
@@ -218,6 +223,36 @@ const app = new Hono()
       const now = new Date();
 
       const submittedTeam = await db.transaction(async (tx) => {
+        const [referenceTeam] = await tx
+          .select()
+          .from(teamsTable)
+          .where(and(eq(teamsTable.id, id), eq(teamsTable.leaderId, user.id)));
+
+        if (!referenceTeam) throw new BadRequestException("Team not found");
+
+        const [event] = await tx
+          .select()
+          .from(eventsTable)
+          .where(
+            and(
+              eq(eventsTable.id, referenceTeam.eventId),
+              eq(eventsTable.isActive, true),
+              gt(eventsTable.registrationClosesAt, now),
+              lt(eventsTable.registrationOpensAt, now),
+            ),
+          )
+          .for("update");
+
+        if (!event)
+          throw new BadRequestException(
+            "Event is not valid or the registration is already closed.",
+          );
+
+        if (!event.teamBased)
+          throw new BadRequestException(
+            "The event is no longer team based, remove your team and participate as individual",
+          );
+
         const [team] = await tx
           .select()
           .from(teamsTable)
@@ -229,23 +264,6 @@ const app = new Hono()
         if (team.registeredAt !== null)
           throw new BadRequestException(
             "You have already submitted your team for this event",
-          );
-
-        const [event] = await tx
-          .select()
-          .from(eventsTable)
-          .where(
-            and(
-              eq(eventsTable.id, team.eventId),
-              eq(eventsTable.isActive, true),
-              gt(eventsTable.registrationClosesAt, now),
-              lt(eventsTable.registrationOpensAt, now),
-            ),
-          );
-
-        if (!event)
-          throw new BadRequestException(
-            "Event is not valid or the registration is already closed.",
           );
 
         const totalTeamMembers = await tx.$count(
