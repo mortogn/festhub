@@ -8,3 +8,4 @@ export * from "./organizers.js";
 export * from "./refresh-tokens.js";
 export * from "./teacher-invites.js";
 export * from "./uploads.js";
+export * from "./contest.js";
