@@ -1,41 +1,38 @@
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
 import z from "zod";
-import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
-import { createTestCaseSchema } from "@festhub/shared/validation";
 import { db } from "@festhub/db";
-import {
-  contestsTable,
-  eventsTable,
-  participantsTable,
-  problemsTable,
-  testCasesTable,
-} from "@festhub/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { problemsTable, testCasesTable } from "@festhub/db/schema";
+import { createTestCaseSchema } from "@festhub/shared/validation";
+import { and, eq } from "drizzle-orm";
+import type { AppVars } from "../../types/variables.js";
+import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
 import { BadRequestException } from "../../exceptions/bad-request-exception.js";
-import { AppVars } from "../../types/variables.js";
-import { ForbiddenException } from "../../exceptions/forbidden-exception.js";
-import { throwOnNotAParticipant } from "./_helper.js";
+import {
+  requireContestAccess,
+  requireEditableContest,
+  isStaff,
+} from "./access.js";
 
-const problemTestCasesParam = zValidator(
+const params = zValidator(
   "param",
-  z.object({
-    problemId: z.uuid(),
-    contestId: z.uuid(),
-  }),
+  z.object({ contestId: z.uuid(), problemId: z.uuid() }),
 );
-
-export const app = new Hono<AppVars>()
+const app = new Hono<AppVars>()
   .post(
     "/",
     enforceAuthMiddleware(["teacher", "admin"]),
-    problemTestCasesParam,
+    params,
     zValidator("json", createTestCaseSchema),
     async (c) => {
-      const { problemId, contestId } = c.req.valid("param");
+      const { contestId, problemId } = c.req.valid("param");
       const body = c.req.valid("json");
-
-      await db.transaction(async (tx) => {
+      const created = await db.transaction(async (tx) => {
+        const { contest } = await requireContestAccess(c, contestId, {
+          dbClient: tx,
+          lock: true,
+        });
+        requireEditableContest(contest);
         const [problem] = await tx
           .select()
           .from(problemsTable)
@@ -45,10 +42,8 @@ export const app = new Hono<AppVars>()
               eq(problemsTable.contestId, contestId),
             ),
           );
-
         if (!problem) throw new BadRequestException("Problem not found");
-
-        const [positionConflict] = await tx
+        const [conflict] = await tx
           .select()
           .from(testCasesTable)
           .where(
@@ -57,48 +52,43 @@ export const app = new Hono<AppVars>()
               eq(testCasesTable.position, body.position),
             ),
           );
-
-        if (positionConflict)
-          throw new BadRequestException(
-            `Test case position ${positionConflict.position} already exists for this problem`,
-          );
-
-        await tx.insert(testCasesTable).values({
-          ...body,
-          problemId,
-        });
+        if (conflict)
+          throw new BadRequestException("Test case position already exists");
+        const [testCase] = await tx
+          .insert(testCasesTable)
+          .values({ ...body, problemId })
+          .returning({ id: testCasesTable.id });
+        return testCase!;
       });
-
-      return c.json({ message: "Test case created successfully" }, 201);
+      return c.json(
+        { ...created, message: "Test case created successfully" },
+        201,
+      );
     },
   )
-  .get("/", enforceAuthMiddleware(), problemTestCasesParam, async (c) => {
-    const { problemId, contestId } = c.req.valid("param");
-
-    const user = c.var.user;
-
-    let whereClauses = [
-      eq(testCasesTable.problemId, problemId),
-      eq(contestsTable.id, contestId),
-    ];
-
-    if (!["teacher", "admin"].includes(user.role)) {
-      await throwOnNotAParticipant({ studentId: user.id, contestId });
-
-      whereClauses.push(eq(testCasesTable.isSample, true));
-      whereClauses.push(eq(contestsTable.isActive, true));
-    }
-
-    const rows = await db
-      .select({
-        testCases: testCasesTable,
-      })
+  .get("/", enforceAuthMiddleware(), params, async (c) => {
+    const { contestId, problemId } = c.req.valid("param");
+    await requireContestAccess(c, contestId);
+    const [problem] = await db
+      .select()
+      .from(problemsTable)
+      .where(
+        and(
+          eq(problemsTable.id, problemId),
+          eq(problemsTable.contestId, contestId),
+        ),
+      );
+    if (!problem) throw new BadRequestException("Problem not found");
+    const testCases = await db
+      .select()
       .from(testCasesTable)
-      .innerJoin(problemsTable, eq(problemsTable.id, testCasesTable.problemId))
-      .innerJoin(contestsTable, eq(contestsTable.id, problemsTable.contestId))
-      .where(and(...whereClauses));
-
-    return c.json({ testCases: rows.map((row) => row.testCases) });
+      .where(
+        and(
+          eq(testCasesTable.problemId, problemId),
+          ...(!isStaff(c) ? [eq(testCasesTable.isSample, true)] : []),
+        ),
+      )
+      .orderBy(testCasesTable.position);
+    return c.json({ testCases });
   });
-
 export default app;

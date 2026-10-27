@@ -1,0 +1,24 @@
+{
+  "name": "@festhub/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@festhub/db": "workspace:*",
+    "@festhub/shared": "workspace:*",
+    "bullmq": "^5.81.5",
+    "dotenv": "^18.0.7",
+    "drizzle-orm": "1.0.0-rc.4",
+    "ioredis": "^5.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

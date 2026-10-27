@@ -6,6 +6,7 @@ allowBuilds:
   bcrypt: true
   esbuild: true
   sharp: false
+  msgpackr-extract: false
   unrs-resolver: false
 
 minimumReleaseAgeExclude:

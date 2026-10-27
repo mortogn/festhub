@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "noEmitOnError": true
   },
-  "include": ["validation/**/*.ts"]
+  "include": ["validation/**/*.ts", "contest/**/*.ts"]
 }

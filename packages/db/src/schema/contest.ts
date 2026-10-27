@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  index,
   pgEnum,
   pgTable,
   real,
@@ -39,18 +40,23 @@ export const contestsTable = pgTable("contests", {
   password: text("password"),
 });
 
-export const problemsTable = pgTable("problems", {
-  id: uuid().primaryKey().defaultRandom(),
-  title: text().notNull(),
-  statement: text().notNull(),
-  memoryLimitInKilobytes: integer("memory_limit_in_kilobytes")
-    .notNull()
-    .default(1024 * 128),
-  cpuLimitInSeconds: integer("cpu_limit_in_seconds").notNull().default(2),
-  contestId: uuid("contest_id")
-    .notNull()
-    .references(() => contestsTable.id),
-});
+export const problemsTable = pgTable(
+  "problems",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    position: integer().notNull(),
+    title: text().notNull(),
+    statement: text().notNull(),
+    memoryLimitInKilobytes: integer("memory_limit_in_kilobytes")
+      .notNull()
+      .default(1024 * 128),
+    cpuLimitInSeconds: integer("cpu_limit_in_seconds").notNull().default(2),
+    contestId: uuid("contest_id")
+      .notNull()
+      .references(() => contestsTable.id),
+  },
+  (table) => [unique().on(table.contestId, table.position)],
+);
 
 export const testCasesTable = pgTable(
   "test_cases",
@@ -60,7 +66,7 @@ export const testCasesTable = pgTable(
       .notNull()
       .references(() => problemsTable.id),
     stdin: text().notNull(),
-    stdout: text(),
+    stdout: text().notNull(),
     position: integer().notNull(),
     isSample: boolean("is_sample").default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -68,25 +74,39 @@ export const testCasesTable = pgTable(
   (table) => [unique().on(table.problemId, table.position)],
 );
 
-export const submissionsTable = pgTable("submissions", {
-  id: uuid().primaryKey().defaultRandom(),
-  problemId: uuid("problem_id")
-    .notNull()
-    .references(() => problemsTable.id),
-  sourceCode: text("source_code").notNull(),
-  languageCode: integer("language_code").notNull(),
-  submittedAt: timestamp("submitted_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  verdict: submissionVerdict(),
-  status: text("status", { enum: ["processing", "completed", "error"] }),
+export const submissionsTable = pgTable(
+  "submissions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problemsTable.id),
+    sourceCode: text("source_code").notNull(),
+    languageCode: integer("language_code").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    verdict: submissionVerdict(),
+    status: text("status", {
+      enum: ["queued", "processing", "completed", "error"],
+    })
+      .notNull()
+      .default("queued"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    errorMessage: text("error_message"),
 
-  submittedByUserId: uuid("submitted_by_user_id")
-    .notNull()
-    .references(() => usersTable.id),
+    submittedByUserId: uuid("submitted_by_user_id")
+      .notNull()
+      .references(() => usersTable.id),
 
-  teamId: uuid("team_id").references(() => teamsTable.id),
-});
+    teamId: uuid("team_id").references(() => teamsTable.id),
+  },
+  (table) => [
+    index().on(table.status),
+    index().on(table.problemId, table.submittedAt),
+  ],
+);
 
 export const submissionTestCaseResultsTable = pgTable(
   "submission_test_case_results",
@@ -105,8 +125,10 @@ export const submissionTestCaseResultsTable = pgTable(
     memoryUsed: integer("memory_used"),
 
     verdict: submissionVerdict(),
+    compileOutput: text("compile_output"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
+  (table) => [unique().on(table.submissionId, table.testCaseId)],
 );

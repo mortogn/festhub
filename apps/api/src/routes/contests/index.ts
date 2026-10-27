@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import {
   createContestSchema,
   updateContestSchema,
+  unlockContestSchema,
 } from "@festhub/shared/validation";
 import { db } from "@festhub/db";
 import {
@@ -11,9 +12,10 @@ import {
   eventsTable,
   problemsTable,
   submissionsTable,
+  participantsTable,
 } from "@festhub/db/schema";
 import { BadRequestException } from "../../exceptions/bad-request-exception.js";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, desc } from "drizzle-orm";
 import z from "zod";
 import { AppVars } from "../../types/variables.js";
 import { NotFoundException } from "../../exceptions/not-found-exception.js";
@@ -22,9 +24,86 @@ import contestProblemsRoute from "./contest-problems.js";
 import problemTestCasesRoute from "./problem-test-cases.js";
 import problemSubmissionRoute from "./problem-submission.js";
 import languagesRoute from "./languages.js";
+import submissionsRoute from "./submissions.js";
+import standingsRoute from "./standings.js";
+import bcrypt from "bcrypt";
+import {
+  isStaff,
+  requireContestAccess,
+  safeContest,
+  unlockContest,
+} from "./access.js";
 
 const app = new Hono<AppVars>()
+  .use("*", async (c, next) => {
+    c.header("Cache-Control", "no-store");
+    await next();
+  })
   .route("/languages", languagesRoute)
+  .get("/", enforceAuthMiddleware(), async (c) => {
+    const user = c.var.user;
+    if (!user.authenticated) throw new BadRequestException("Sign in required");
+    const contests = isStaff(c)
+      ? await db
+          .select()
+          .from(contestsTable)
+          .orderBy(desc(contestsTable.startsAt))
+      : (
+          await db
+            .select({ contest: contestsTable })
+            .from(contestsTable)
+            .innerJoin(
+              participantsTable,
+              eq(participantsTable.eventId, contestsTable.eventId),
+            )
+            .where(
+              and(
+                eq(contestsTable.isActive, true),
+                eq(participantsTable.studentId, user.id),
+                eq(participantsTable.registrationStatus, "accepted"),
+              ),
+            )
+            .orderBy(desc(contestsTable.startsAt))
+        ).map((row) => row.contest);
+    return c.json({
+      contests: await Promise.all(
+        contests.map((contest) => safeContest(c, contest)),
+      ),
+    });
+  })
+  .get(
+    "/by-slug/:slug",
+    zValidator("param", z.object({ slug: z.string().min(1) })),
+    async (c) => {
+      const { slug } = c.req.valid("param");
+      const [contest] = await db
+        .select()
+        .from(contestsTable)
+        .where(
+          and(
+            eq(contestsTable.slug, slug),
+            ...(!isStaff(c) ? [eq(contestsTable.isActive, true)] : []),
+          ),
+        );
+      if (!contest) throw new NotFoundException("Contest not found");
+      return c.json(await safeContest(c, contest));
+    },
+  )
+  .post(
+    "/:contestId/unlock",
+    enforceAuthMiddleware(),
+    zValidator("param", z.object({ contestId: z.uuid() })),
+    zValidator("json", unlockContestSchema),
+    async (c) => {
+      const { contest } = await requireContestAccess(
+        c,
+        c.req.valid("param").contestId,
+        { content: false, skipPassword: true },
+      );
+      await unlockContest(c, contest, c.req.valid("json").password);
+      return c.json({ message: "Contest unlocked" });
+    },
+  )
   .post(
     "/",
     enforceAuthMiddleware(["teacher", "admin"]),
@@ -40,7 +119,8 @@ const app = new Hono<AppVars>()
           .from(eventsTable)
           .where(eq(eventsTable.id, body.eventId));
 
-        if (!event) throw new BadRequestException("Event not found");
+        if (!event || event.type !== "contest")
+          throw new BadRequestException("A contest event is required");
 
         const [existingContest] = await tx
           .select()
@@ -62,7 +142,10 @@ const app = new Hono<AppVars>()
             "Contest with this slug already exists",
           );
 
-        await tx.insert(contestsTable).values(body);
+        await tx.insert(contestsTable).values({
+          ...body,
+          password: body.password ? await bcrypt.hash(body.password, 10) : null,
+        });
       });
 
       return c.json({ message: "Contest created successfully" }, 201);
@@ -86,9 +169,7 @@ const app = new Hono<AppVars>()
 
     if (!contest) throw new NotFoundException("Contest not found");
 
-    const { password, ...safeContest } = contest;
-
-    return c.json(safeContest);
+    return c.json(await safeContest(c, contest));
   })
   .put(
     "/:id",
@@ -109,6 +190,18 @@ const app = new Hono<AppVars>()
 
         if (!contest) throw new BadRequestException("Contest not found");
 
+        if (
+          contest.startsAt <= new Date() &&
+          (body.startsAt !== undefined ||
+            body.endsAt !== undefined ||
+            body.eventId !== undefined ||
+            body.allowedLanguages !== undefined)
+        ) {
+          throw new BadRequestException(
+            "Schedule, event, and languages cannot change after the contest starts",
+          );
+        }
+
         if (body.eventId && contest.eventId !== body.eventId) {
           const [newEvent] = await tx
             .select()
@@ -116,7 +209,8 @@ const app = new Hono<AppVars>()
             .leftJoin(contestsTable, eq(contestsTable.eventId, eventsTable.id))
             .where(eq(eventsTable.id, body.eventId));
 
-          if (!newEvent) throw new BadRequestException("Event not found");
+          if (!newEvent || newEvent.events.type !== "contest")
+            throw new BadRequestException("A contest event is required");
 
           if (!!newEvent.contests)
             throw new BadRequestException(
@@ -128,13 +222,15 @@ const app = new Hono<AppVars>()
             .from(problemsTable)
             .where(eq(problemsTable.contestId, contest.id));
 
-          const submissionCount = await tx.$count(
-            submissionsTable,
-            inArray(
-              submissionsTable.problemId,
-              problems.map((v) => v.id),
-            ),
-          );
+          const submissionCount = problems.length
+            ? await tx.$count(
+                submissionsTable,
+                inArray(
+                  submissionsTable.problemId,
+                  problems.map((v) => v.id),
+                ),
+              )
+            : 0;
 
           if (submissionCount > 0)
             throw new BadRequestException(
@@ -176,13 +272,24 @@ const app = new Hono<AppVars>()
 
         await tx
           .update(contestsTable)
-          .set({ ...body })
+          .set({
+            ...body,
+            ...(body.password !== undefined
+              ? {
+                  password: body.password
+                    ? await bcrypt.hash(body.password, 10)
+                    : null,
+                }
+              : {}),
+          })
           .where(eq(contestsTable.id, contest.id));
       });
 
       return c.json({ id: id, message: "Contest updated successfully" });
     },
   )
+  .route("/:contestId/submissions", submissionsRoute)
+  .route("/:contestId/standings", standingsRoute)
   .route("/:contestId/problems", contestProblemsRoute)
   .route("/:contestId/problems/:problemId/testcases", problemTestCasesRoute)
   .route("/:contestId/problems/:problemId/submission", problemSubmissionRoute);

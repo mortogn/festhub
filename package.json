@@ -5,6 +5,8 @@
     "dev:student": "pnpm --filter @festhub/student dev",
     "dev:admin": "pnpm --filter @festhub/admin dev",
     "dev:teacher": "pnpm --filter @festhub/teacher dev",
-    "dev:api": "pnpm --filter @festhub/api dev"
+    "dev:api": "pnpm --filter @festhub/api dev",
+    "dev:contests": "pnpm --filter @festhub/contests dev",
+    "dev:worker": "pnpm --filter @festhub/worker dev"
   }
 }

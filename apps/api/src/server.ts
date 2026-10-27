@@ -21,6 +21,8 @@ import teamInvitesRoute from "./routes/team-invites.js";
 import usersRoute from "./routes/users.js";
 import uploadRoute from "./routes/upload.js";
 import contestRoute from "./routes/contests/index.js";
+import { closeSubmissionQueue } from "./lib/submission-queue.js";
+import { pool } from "@festhub/db";
 
 dotenv.config({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),
@@ -91,9 +93,22 @@ app.onError((err, c) => {
   );
 });
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port: Number(process.env.PORT) || 8080,
 });
+
+let stopping = false;
+async function shutdown() {
+  if (stopping) return;
+  stopping = true;
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
+  await closeSubmissionQueue();
+  await pool.end();
+}
+process.on("SIGTERM", () => void shutdown().catch(() => process.exit(1)));
+process.on("SIGINT", () => void shutdown().catch(() => process.exit(1)));
 
 export type AppType = typeof app;

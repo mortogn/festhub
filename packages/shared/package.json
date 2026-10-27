@@ -8,7 +8,11 @@
       "types": "./dist/validation/index.d.ts",
       "default": "./dist/validation/index.js"
     },
-    "./utils/*": "./utils/*"
+    "./utils/*": "./utils/*",
+    "./contest": {
+      "types": "./dist/contest/index.d.ts",
+      "default": "./dist/contest/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
