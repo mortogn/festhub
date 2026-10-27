@@ -5,13 +5,26 @@ import MarkdownIt from "markdown-it";
 import { useAuthContext } from "@festhub/frontend/auth";
 import { errorMessage } from "@festhub/frontend/api";
 import { Button } from "@festhub/ui/components/button";
-import { Badge } from "@festhub/ui/components/badge";
 import { Input } from "@festhub/ui/components/input";
 import { Label } from "@festhub/ui/components/label";
+import { Skeleton } from "@festhub/ui/components/skeleton";
 import { Textarea } from "@festhub/ui/components/textarea";
+import {
+  ArrowLeftIcon,
+  CalendarClockIcon,
+  ClockIcon,
+  CodeIcon,
+  ListChecksIcon,
+  LockIcon,
+  SendIcon,
+  TimerIcon,
+  TrophyIcon,
+} from "@festhub/ui/icons";
+import { cn } from "@festhub/ui/lib/utils";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@festhub/ui/components/card";
@@ -40,6 +53,7 @@ import {
 } from "@/lib/api";
 import { usePoll, useClock } from "@/lib/use-poll";
 import { ErrorState } from "./shell";
+import { LoadingBlock, PhaseBadge, contestPhase } from "./status";
 import { Submissions } from "./submissions";
 import { StandingsTable } from "./standings";
 
@@ -62,6 +76,19 @@ function duration(ms: number) {
     .toString()
     .padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
 }
+function formatDuration(ms: number) {
+  const minutes = Math.max(0, Math.round(ms / 60000));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${minutes} min`;
+  return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+function formatDateTime(value: number) {
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 export function ContestWorkspace({ slug }: { slug: string }) {
   const loader = useCallback(() => loadContest(slug), [slug]);
@@ -72,45 +99,52 @@ export function ContestWorkspace({ slug }: { slug: string }) {
     return error ? (
       <ErrorState message={error} retry={refresh} />
     ) : (
-      <p role="status">Loading contest…</p>
+      <LoadingBlock label="Loading contest…">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-10 w-96 max-w-full" />
+        <Skeleton className="h-64 rounded-xl" />
+      </LoadingBlock>
     );
   const starts = new Date(contest.startsAt).getTime();
   const ends = new Date(contest.endsAt).getTime();
+  const phase = contestPhase(starts, ends, now);
   const staff = auth.user?.role === "teacher" || auth.user?.role === "admin";
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       <Link
         href="/"
-        className="text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← All contests
+        <ArrowLeftIcon className="size-4" />
+        All contests
       </Link>
-      <div className="flex flex-wrap items-start justify-between gap-5">
-        <div className="space-y-2">
-          <Badge variant="secondary">
-            {now < starts
-              ? "Upcoming"
-              : now >= ends
-                ? "Finished"
-                : "Live contest"}
-          </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight">
+      <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
+        <div className="min-w-0 flex-1 basis-80 space-y-3">
+          <PhaseBadge phase={phase} />
+          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             {contest.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {new Date(starts).toLocaleString()} —{" "}
-            {new Date(ends).toLocaleTimeString()}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <CalendarClockIcon className="size-4 shrink-0 text-brand" />
+              {formatDateTime(starts)} — {formatDateTime(ends)}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <TimerIcon className="size-4 shrink-0 text-brand" />
+              {formatDuration(ends - starts)}
+            </span>
+          </div>
         </div>
-        <div className="rounded-lg border px-5 py-3 text-right">
-          <p className="text-xs text-muted-foreground">
-            {now < starts
+        <div className="flex min-w-52 flex-col gap-2">
+          <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <TimerIcon className="size-3.5" />
+            {phase === "upcoming"
               ? "Starts in"
-              : now >= ends
+              : phase === "finished"
                 ? "Contest finished"
                 : "Time remaining"}
           </p>
-          <p className="font-mono text-2xl tabular-nums">
+          <p className="font-mono text-3xl font-semibold tabular-nums">
             {duration((now < starts ? starts : ends) - now)}
           </p>
         </div>
@@ -127,8 +161,11 @@ export function ContestWorkspace({ slug }: { slug: string }) {
       {contest.isLocked ? (
         <Unlock contest={contest} onUnlocked={refresh} />
       ) : now < starts && !staff ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
+        <Card className="border-dashed shadow-none ring-0 border">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+            <span className="flex size-12 items-center justify-center rounded-full bg-muted">
+              <ClockIcon className="size-5" />
+            </span>
             Problems will be available when the contest starts.
           </CardContent>
         </Card>
@@ -177,20 +214,31 @@ function Unlock({
   return (
     <Card className="max-w-md">
       <CardHeader>
-        <CardTitle>Enter contest password</CardTitle>
+        <span className="mb-2 flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand">
+          <LockIcon className="size-5" />
+        </span>
+        <CardTitle className="text-lg font-semibold">
+          Enter contest password
+        </CardTitle>
+        <CardDescription>
+          This contest is protected. Ask your organizer for the password.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <Label htmlFor="contest-password">Contest password</Label>
-          <Input
-            id="contest-password"
-            name="password"
-            type="password"
-            autoComplete="off"
-            required
-            maxLength={72}
-            disabled={pending}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="contest-password">Contest password</Label>
+            <Input
+              id="contest-password"
+              name="password"
+              type="password"
+              autoComplete="off"
+              required
+              maxLength={72}
+              disabled={pending}
+              className="h-10"
+            />
+          </div>
           {error && <ErrorState message={error} />}
           <Button disabled={pending}>
             {pending ? "Checking…" : "Unlock contest"}
@@ -219,14 +267,31 @@ function ContestContent({
     return error ? (
       <ErrorState message={error} retry={refresh} />
     ) : (
-      <p role="status">Loading problems…</p>
+      <LoadingBlock label="Loading problems…">
+        <Skeleton className="h-9 w-80 max-w-full" />
+        <Skeleton className="h-72 rounded-xl" />
+      </LoadingBlock>
     );
   return (
     <Tabs value={tab} onValueChange={setTab} className="gap-6">
-      <TabsList variant="line">
-        <TabsTrigger value="problems">Problems</TabsTrigger>
-        <TabsTrigger value="submissions">Submissions</TabsTrigger>
-        <TabsTrigger value="standings">Standings</TabsTrigger>
+      <TabsList
+        variant="line"
+        className="h-11! w-full justify-start gap-2 overflow-x-auto border-b p-0"
+      >
+        {[
+          { value: "problems", label: "Problems", icon: CodeIcon },
+          { value: "submissions", label: "Submissions", icon: ListChecksIcon },
+          { value: "standings", label: "Standings", icon: TrophyIcon },
+        ].map(({ value, label, icon: Icon }) => (
+          <TabsTrigger
+            key={value}
+            value={value}
+            className="h-full! flex-none gap-2 px-4 text-sm after:bottom-[-1px]! after:h-0.5 after:bg-brand! data-active:text-brand!"
+          >
+            <Icon />
+            {label}
+          </TabsTrigger>
+        ))}
       </TabsList>
       <TabsContent value="problems">
         {!problem ? (
@@ -234,30 +299,49 @@ function ContestContent({
             No problems have been published.
           </p>
         ) : (
-          <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
             <nav
               aria-label="Contest problems"
-              className="flex flex-wrap gap-2 lg:flex-col"
+              className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-24 lg:flex-col lg:overflow-visible lg:pb-0"
             >
-              {data.problems.map((entry) => (
-                <Button
-                  key={entry.id}
-                  variant={entry.id === problem.id ? "secondary" : "ghost"}
-                  className="justify-start"
-                  onClick={() => setSelected(entry.id)}
-                >
-                  {problemLabel(entry.position)}. {entry.title}
-                </Button>
-              ))}
+              {data.problems.map((entry) => {
+                const active = entry.id === problem.id;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    aria-current={active ? "true" : undefined}
+                    onClick={() => setSelected(entry.id)}
+                    className={cn(
+                      "flex shrink-0 items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm font-medium outline-none transition-all focus-visible:ring-3 focus-visible:ring-ring/50",
+                      active
+                        ? "border-brand/30 bg-brand-soft text-foreground shadow-xs"
+                        : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-semibold",
+                        active
+                          ? "bg-brand text-brand-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {problemLabel(entry.position)}
+                    </span>
+                    <span className="truncate">{entry.title}</span>
+                  </button>
+                );
+              })}
             </nav>
             <div className="min-w-0 space-y-6">
               <ProblemStatement
-                key={problem.id}
+                key={`statement-${problem.id}`}
                 contestId={contest.id}
                 problem={problem}
               />
               <SubmissionForm
-                key={problem.id}
+                key={`submission-${problem.id}`}
                 contest={contest}
                 problem={problem}
                 canSubmit={canSubmit}
@@ -300,14 +384,25 @@ function ProblemStatement({
   const { data, error, refresh } = usePoll(loader);
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">
-          {problemLabel(problem.position)}. {problem.title}
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Time limit: {problem.cpuLimitInSeconds} s · Memory limit:{" "}
-          {problem.memoryLimitInKilobytes / 1024} MiB
-        </p>
+      <CardHeader className="gap-3 border-b pb-6">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand font-mono text-lg font-semibold text-brand-foreground">
+            {problemLabel(problem.position)}
+          </span>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            {problem.title}
+          </CardTitle>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+            <TimerIcon className="size-3.5" />
+            Time limit: {problem.cpuLimitInSeconds} s
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+            <CodeIcon className="size-3.5" />
+            Memory limit: {problem.memoryLimitInKilobytes / 1024} MiB
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <article
@@ -320,18 +415,22 @@ function ProblemStatement({
         {data?.testCases
           .filter((entry) => entry.isSample)
           .map((sample, i) => (
-            <div key={sample.id} className="space-y-2">
-              <h3 className="font-medium">Sample {i + 1}</h3>
+            <div key={sample.id} className="space-y-3">
+              <h3 className="text-sm font-semibold">Sample {i + 1}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-xs text-muted-foreground">Input</p>
-                  <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+                <div className="overflow-hidden rounded-xl border">
+                  <p className="border-b bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                    Input
+                  </p>
+                  <pre className="overflow-x-auto p-3 font-mono text-xs">
                     {sample.stdin || "(empty)"}
                   </pre>
                 </div>
-                <div>
-                  <p className="mb-2 text-xs text-muted-foreground">Output</p>
-                  <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+                <div className="overflow-hidden rounded-xl border">
+                  <p className="border-b bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                    Output
+                  </p>
+                  <pre className="overflow-x-auto p-3 font-mono text-xs">
                     {sample.stdout || "(empty)"}
                   </pre>
                 </div>
@@ -366,12 +465,15 @@ function SubmissionForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Submit a solution</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <SendIcon className="size-4 text-brand" />
+          Submit a solution
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <ErrorState message={error} retry={refresh} />}
         {!canSubmit && (
-          <p className="text-sm text-muted-foreground">
+          <p className="rounded-xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
             Submissions are available to participants during the contest.
           </p>
         )}
@@ -471,25 +573,27 @@ function CodeInput({
   }
   return (
     <form onSubmit={submit} className="space-y-4" aria-busy={pending}>
-      <Label htmlFor="source-code">Source code</Label>
-      <Textarea
-        id="source-code"
-        value={code}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        className="min-h-80 resize-y font-mono text-sm"
-        placeholder="Write or paste your solution here…"
-        onChange={(event) => {
-          const value = event.target.value;
-          setCode(value);
-          try {
-            localStorage.setItem(draftKey, value);
-          } catch {
-            setStorageError(true);
-          }
-        }}
-      />
+      <div className="space-y-2">
+        <Label htmlFor="source-code">Source code</Label>
+        <Textarea
+          id="source-code"
+          value={code}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          className="min-h-80 resize-y rounded-xl border-slate-800 bg-slate-950 p-4 font-mono text-sm leading-relaxed text-slate-100 placeholder:text-slate-500 dark:bg-slate-950"
+          placeholder="Write or paste your solution here…"
+          onChange={(event) => {
+            const value = event.target.value;
+            setCode(value);
+            try {
+              localStorage.setItem(draftKey, value);
+            } catch {
+              setStorageError(true);
+            }
+          }}
+        />
+      </div>
       <p className="text-xs text-muted-foreground">
         {storageError
           ? "Draft storage is unavailable in this browser. Keep a copy of your code."
@@ -497,7 +601,11 @@ function CodeInput({
         Maximum 64 KiB.
       </p>
       {error && <ErrorState message={error} />}
-      <Button disabled={pending || !canSubmit || !code.trim()}>
+      <Button
+        className="h-10 px-4"
+        disabled={pending || !canSubmit || !code.trim()}
+      >
+        <SendIcon />
         {pending ? "Submitting…" : "Submit solution"}
       </Button>
     </form>

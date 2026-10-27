@@ -1,13 +1,16 @@
 "use client";
 import { useCallback, useState } from "react";
-import { Badge } from "@festhub/ui/components/badge";
 import { Button } from "@festhub/ui/components/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@festhub/ui/components/card";
+import { Skeleton } from "@festhub/ui/components/skeleton";
+import { cn } from "@festhub/ui/lib/utils";
+import { ArrowLeftIcon, ArrowRightIcon, InboxIcon } from "@festhub/ui/icons";
 import {
   Table,
   TableBody,
@@ -24,6 +27,7 @@ import {
 } from "@/lib/api";
 import { usePoll } from "@/lib/use-poll";
 import { ErrorState } from "./shell";
+import { LoadingBlock } from "./status";
 
 const listInterval = (data: Awaited<ReturnType<typeof loadSubmissions>>) =>
   data.submissions.some(
@@ -38,18 +42,25 @@ export function VerdictBadge({
   status: string;
   verdict: string | null;
 }) {
+  const tone =
+    verdict === "AC"
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+      : status === "error" || (verdict && verdict !== "AC")
+        ? "bg-red-50 text-red-700 ring-red-600/20"
+        : "bg-amber-50 text-amber-700 ring-amber-600/20";
+  const inFlight = status === "queued" || status === "processing";
   return (
-    <Badge
-      variant={
-        verdict === "AC"
-          ? "default"
-          : status === "error" || (verdict && verdict !== "AC")
-            ? "destructive"
-            : "secondary"
-      }
+    <span
+      className={cn(
+        "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold capitalize ring-1 ring-inset",
+        tone,
+      )}
     >
+      {inFlight && (
+        <span className="size-1.5 animate-pulse rounded-full bg-current motion-reduce:animate-none" />
+      )}
       {status === "error" ? "Judge error" : (verdict ?? status)}
-    </Badge>
+    </span>
   );
 }
 export function Submissions({
@@ -109,61 +120,78 @@ function SubmissionList({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your submissions</CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <CardTitle className="text-lg font-semibold">Your submissions</CardTitle>
+        <CardDescription>
           For team contests, this includes submissions from your teammates.
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <ErrorState message={error} retry={refresh} />}
-        {!data && !error && <p role="status">Loading submissions…</p>}
+        {!data && !error && (
+          <LoadingBlock label="Loading submissions…">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-10" />
+            ))}
+          </LoadingBlock>
+        )}
         {data && !data.submissions.length ? (
-          <p className="py-6 text-muted-foreground">No submissions yet.</p>
+          <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground">
+            <span className="flex size-11 items-center justify-center rounded-full bg-muted">
+              <InboxIcon className="size-5" />
+            </span>
+            No submissions yet.
+          </div>
         ) : (
           data && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Problem</TableHead>
-                  <TableHead>Language ID</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Details</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.submissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell className="text-xs">
-                      {new Date(submission.submittedAt).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      {problems.find(
-                        (problem) => problem.id === submission.problemId,
-                      )?.title ?? "Problem"}
-                    </TableCell>
-                    <TableCell>{submission.languageCode}</TableCell>
-                    <TableCell>
-                      <VerdictBadge
-                        status={submission.status}
-                        verdict={submission.verdict}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onSelect(submission.id)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
+            <div className="overflow-hidden rounded-xl border">
+              <Table>
+                <TableHeader className="bg-muted/60">
+                  <TableRow>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Problem</TableHead>
+                    <TableHead>Language ID</TableHead>
+                    <TableHead>Result</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Details</span>
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.submissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell className="text-xs text-muted-foreground tabular-nums">
+                        {new Date(submission.submittedAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {problems.find(
+                          (problem) => problem.id === submission.problemId,
+                        )?.title ?? "Problem"}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {submission.languageCode}
+                      </TableCell>
+                      <TableCell>
+                        <VerdictBadge
+                          status={submission.status}
+                          verdict={submission.verdict}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-brand hover:text-brand"
+                          onClick={() => onSelect(submission.id)}
+                        >
+                          View
+                          <ArrowRightIcon />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )
         )}
         <div className="flex items-center justify-end gap-3">
@@ -173,9 +201,12 @@ function SubmissionList({
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
           >
+            <ArrowLeftIcon />
             Previous
           </Button>
-          <span className="text-xs">Page {page}</span>
+          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+            Page {page}
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -183,6 +214,7 @@ function SubmissionList({
             onClick={() => setPage(page + 1)}
           >
             Next
+            <ArrowRightIcon />
           </Button>
         </div>
       </CardContent>
@@ -208,26 +240,48 @@ function SubmissionPanel({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Submission details</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Submission details
+        </CardTitle>
         <Button variant="ghost" size="sm" onClick={onClose}>
           Close
         </Button>
       </CardHeader>
       <CardContent className="space-y-4" aria-live="polite">
         {error && <ErrorState message={error} retry={refresh} />}
-        {!data && !error && <p role="status">Loading result…</p>}
+        {!data && !error && (
+          <LoadingBlock label="Loading result…">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-24" />
+          </LoadingBlock>
+        )}
         {data && (
           <>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-muted/60 p-4">
               <VerdictBadge status={data.status} verdict={data.verdict} />
+              <span className="text-sm font-medium">
+                {data.passed}/{data.total} passed
+              </span>
               <span className="text-sm text-muted-foreground">
-                {data.passed}/{data.total} passed · {data.judged} judged
+                · {data.judged} judged
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Maximum time: {data.executionTime ?? "—"} s · Maximum memory:{" "}
-              {data.memoryUsed ?? "—"} KiB
-            </p>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div className="rounded-xl border p-3">
+                <dt className="text-xs text-muted-foreground">Maximum time</dt>
+                <dd className="font-mono tabular-nums">
+                  {data.executionTime ?? "—"} s
+                </dd>
+              </div>
+              <div className="rounded-xl border p-3">
+                <dt className="text-xs text-muted-foreground">
+                  Maximum memory
+                </dt>
+                <dd className="font-mono tabular-nums">
+                  {data.memoryUsed ?? "—"} KiB
+                </dd>
+              </div>
+            </dl>
             {data.status === "error" && (
               <p className="text-sm text-destructive">
                 The judge could not finish this submission. Contact a contest
@@ -243,14 +297,16 @@ function SubmissionPanel({
             {data.compileOutput && (
               <div>
                 <h3 className="mb-2 font-medium">Compiler output</h3>
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
+                <pre className="max-h-80 overflow-auto rounded-xl border bg-muted p-4 font-mono text-xs whitespace-pre-wrap">
                   {data.compileOutput}
                 </pre>
               </div>
             )}
-            <details>
-              <summary className="cursor-pointer text-sm">Source code</summary>
-              <pre className="mt-3 max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs">
+            <details className="group/source rounded-xl border">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium select-none hover:bg-muted/50">
+                Source code
+              </summary>
+              <pre className="max-h-96 overflow-auto rounded-b-xl border-t bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100">
                 {data.sourceCode}
               </pre>
             </details>
