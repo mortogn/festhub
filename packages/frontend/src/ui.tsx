@@ -316,11 +316,17 @@ export type FieldSpec = {
   disabled?: boolean;
   fullWidth?: boolean;
 };
+type EditorConfirmation = {
+  title: string;
+  description: string;
+  actionLabel: string;
+};
 export function Editor({
   title,
   fields,
   initialValues = {},
   onSubmit,
+  confirm,
   submitLabel = "Save changes",
   successMessage = "Saved successfully.",
   persistentErrors = false,
@@ -329,6 +335,7 @@ export function Editor({
   fields: FieldSpec[];
   initialValues?: Record<string, string>;
   onSubmit: (values: Record<string, string>) => Promise<void>;
+  confirm?: (values: Record<string, string>) => EditorConfirmation | null;
   submitLabel?: string;
   successMessage?: string;
   persistentErrors?: boolean;
@@ -339,6 +346,9 @@ export function Editor({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [confirmation, setConfirmation] = useState<
+    (EditorConfirmation & { resolve: (confirmed: boolean) => void }) | null
+  >(null);
   const update = (name: string, value: string) => {
     setValues((v) => ({ ...v, [name]: value }));
     setSuccess(false);
@@ -370,6 +380,13 @@ export function Editor({
                   `Enter a valid whole number for ${field.label.toLowerCase()}.`,
                 );
             }
+          }
+          const prompt = confirm?.(values);
+          if (prompt) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+              setConfirmation({ ...prompt, resolve });
+            });
+            if (!confirmed) return;
           }
           await onSubmit(values);
           if (toastFeedback) toast.success(successMessage);
@@ -496,6 +513,33 @@ export function Editor({
       >
         {pending ? "Saving…" : submitLabel}
       </Button>
+      <AlertDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            confirmation?.resolve(false);
+            setConfirmation(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmation?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmation?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="button"
+              onClick={() => confirmation?.resolve(true)}
+            >
+              {confirmation?.actionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

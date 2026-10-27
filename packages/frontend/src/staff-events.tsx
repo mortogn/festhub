@@ -1116,6 +1116,23 @@ function EventVenue({
               ]}
               initialValues={{ venueId: event.venueId ?? "" }}
               submitLabel="Assign venue"
+              confirm={(values) => {
+                const venue = venues.data?.find(
+                  (item) => item.id === values.venueId,
+                );
+                if (
+                  !venue ||
+                  venue.blockingEvents.length ||
+                  event.maxParticipants == null ||
+                  event.maxParticipants <= venue.capacity
+                )
+                  return null;
+                return {
+                  title: "Venue capacity warning",
+                  description: `This venue has a capacity of only ${venue.capacity}, but the event's maximum of ${event.maxParticipants} participants exceeds it. Are you sure you want to select this venue?`,
+                  actionLabel: "Continue Anyway",
+                };
+              }}
               onSubmit={async (values) => {
                 const venue = venues.data?.find(
                   (item) => item.id === values.venueId,
