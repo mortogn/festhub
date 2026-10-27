@@ -27,6 +27,8 @@ import languagesRoute from "./languages.js";
 import submissionsRoute from "./submissions.js";
 import standingsRoute from "./standings.js";
 import bcrypt from "bcrypt";
+import { getJudgeLimits } from "./_helper.js";
+import { requirePublishableContest, validateLanguages } from "./authoring.js";
 import {
   isStaff,
   requireContestAccess,
@@ -40,6 +42,9 @@ const app = new Hono<AppVars>()
     await next();
   })
   .route("/languages", languagesRoute)
+  .get("/limits", enforceAuthMiddleware(["teacher", "admin"]), async (c) =>
+    c.json(await getJudgeLimits()),
+  )
   .get("/", enforceAuthMiddleware(), async (c) => {
     const user = c.var.user;
     if (!user.authenticated) throw new BadRequestException("Sign in required");
@@ -109,11 +114,14 @@ const app = new Hono<AppVars>()
     enforceAuthMiddleware(["teacher", "admin"]),
     zValidator("json", createContestSchema),
     async (c) => {
-      const user = c.var.user;
-
       const body = c.req.valid("json");
+      if (body.isActive)
+        throw new BadRequestException(
+          "Create a draft and add problems before publishing",
+        );
+      await validateLanguages(body.allowedLanguages);
 
-      await db.transaction(async (tx) => {
+      const id = await db.transaction(async (tx) => {
         const [event] = await tx
           .select()
           .from(eventsTable)
@@ -142,13 +150,19 @@ const app = new Hono<AppVars>()
             "Contest with this slug already exists",
           );
 
-        await tx.insert(contestsTable).values({
-          ...body,
-          password: body.password ? await bcrypt.hash(body.password, 10) : null,
-        });
+        const [created] = await tx
+          .insert(contestsTable)
+          .values({
+            ...body,
+            password: body.password
+              ? await bcrypt.hash(body.password, 10)
+              : null,
+          })
+          .returning({ id: contestsTable.id });
+        return created!.id;
       });
 
-      return c.json({ message: "Contest created successfully" }, 201);
+      return c.json({ id, message: "Contest created successfully" }, 201);
     },
   )
   .get("/:id", zValidator("param", z.object({ id: z.uuid() })), async (c) => {
@@ -180,6 +194,7 @@ const app = new Hono<AppVars>()
       const { id } = c.req.valid("param");
 
       const body = c.req.valid("json");
+      await validateLanguages(body.allowedLanguages);
 
       await db.transaction(async (tx) => {
         const [contest] = await tx
@@ -189,6 +204,8 @@ const app = new Hono<AppVars>()
           .for("update");
 
         if (!contest) throw new BadRequestException("Contest not found");
+        if (body.isActive === true && !contest.isActive)
+          await requirePublishableContest(tx, id);
 
         if (
           contest.startsAt <= new Date() &&

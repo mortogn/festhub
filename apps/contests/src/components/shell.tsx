@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type PropsWithChildren } from "react";
 import { SignOutButton, useAuthContext } from "@festhub/frontend/auth";
@@ -19,12 +20,16 @@ export function Shell({ children }: PropsWithChildren) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Link
             href="/"
+            aria-label="PUB FestHub contests"
             className="flex items-center gap-3 font-semibold tracking-tight"
           >
-            <span className="rounded-md bg-primary px-2 py-1 font-mono text-primary-foreground">
-              &lt;/&gt;
-            </span>
-            FestHub{" "}
+            <Image
+              src="/logo.svg"
+              alt="PUB FestHub"
+              width={123}
+              height={58}
+              priority
+            />
             <span className="hidden font-normal text-muted-foreground sm:inline">
               Contests
             </span>

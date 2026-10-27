@@ -1,4 +1,5 @@
 export {
+  CodeIcon,
   BellIcon,
   SearchIcon,
   ArrowRightIcon,

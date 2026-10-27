@@ -671,6 +671,13 @@ export function StaffEventPage({ id }: { id: string }) {
               description={`${formatDateTime(event.data.startsAt)} – ${formatDateTime(event.data.endsAt)}`}
               action={
                 <div className="flex flex-wrap items-center gap-2">
+                  {event.data.type === "contest" && (
+                    <Button asChild variant="outline">
+                      <Link href={`/dashboard/contests/create?eventId=${id}`}>
+                        Programming contest
+                      </Link>
+                    </Button>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Badge

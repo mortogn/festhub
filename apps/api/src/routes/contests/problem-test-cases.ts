@@ -13,6 +13,7 @@ import {
   requireEditableContest,
   isStaff,
 } from "./access.js";
+import { requirePublishableContest } from "./authoring.js";
 
 const params = zValidator(
   "param",
@@ -64,6 +65,109 @@ const app = new Hono<AppVars>()
         { ...created, message: "Test case created successfully" },
         201,
       );
+    },
+  )
+  .put(
+    "/:testCaseId",
+    enforceAuthMiddleware(["teacher", "admin"]),
+    zValidator(
+      "param",
+      z.object({
+        contestId: z.uuid(),
+        problemId: z.uuid(),
+        testCaseId: z.uuid(),
+      }),
+    ),
+    zValidator("json", createTestCaseSchema),
+    async (c) => {
+      const { contestId, problemId, testCaseId } = c.req.valid("param");
+      const body = c.req.valid("json");
+      await db.transaction(async (tx) => {
+        const { contest } = await requireContestAccess(c, contestId, {
+          dbClient: tx,
+          lock: true,
+        });
+        requireEditableContest(contest);
+        const [problem] = await tx
+          .select()
+          .from(problemsTable)
+          .where(
+            and(
+              eq(problemsTable.id, problemId),
+              eq(problemsTable.contestId, contestId),
+            ),
+          );
+        if (!problem) throw new BadRequestException("Problem not found");
+        const [conflict] = await tx
+          .select()
+          .from(testCasesTable)
+          .where(
+            and(
+              eq(testCasesTable.problemId, problemId),
+              eq(testCasesTable.position, body.position),
+            ),
+          );
+        if (conflict && conflict.id !== testCaseId)
+          throw new BadRequestException("Test case position already exists");
+        const updated = await tx
+          .update(testCasesTable)
+          .set(body)
+          .where(
+            and(
+              eq(testCasesTable.id, testCaseId),
+              eq(testCasesTable.problemId, problemId),
+            ),
+          )
+          .returning({ id: testCasesTable.id });
+        if (!updated.length)
+          throw new BadRequestException("Test case not found");
+      });
+      return c.json({ message: "Test case updated successfully" });
+    },
+  )
+  .delete(
+    "/:testCaseId",
+    enforceAuthMiddleware(["teacher", "admin"]),
+    zValidator(
+      "param",
+      z.object({
+        contestId: z.uuid(),
+        problemId: z.uuid(),
+        testCaseId: z.uuid(),
+      }),
+    ),
+    async (c) => {
+      const { contestId, problemId, testCaseId } = c.req.valid("param");
+      await db.transaction(async (tx) => {
+        const { contest } = await requireContestAccess(c, contestId, {
+          dbClient: tx,
+          lock: true,
+        });
+        requireEditableContest(contest);
+        const [problem] = await tx
+          .select()
+          .from(problemsTable)
+          .where(
+            and(
+              eq(problemsTable.id, problemId),
+              eq(problemsTable.contestId, contestId),
+            ),
+          );
+        if (!problem) throw new BadRequestException("Problem not found");
+        const removed = await tx
+          .delete(testCasesTable)
+          .where(
+            and(
+              eq(testCasesTable.id, testCaseId),
+              eq(testCasesTable.problemId, problemId),
+            ),
+          )
+          .returning({ id: testCasesTable.id });
+        if (!removed.length)
+          throw new BadRequestException("Test case not found");
+        if (contest.isActive) await requirePublishableContest(tx, contestId);
+      });
+      return c.json({ message: "Test case deleted successfully" });
     },
   )
   .get("/", enforceAuthMiddleware(), params, async (c) => {

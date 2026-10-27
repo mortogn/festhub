@@ -85,6 +85,7 @@ test(
     } = schema;
     const ids = {
       admin: randomUUID(),
+      teacher: randomUUID(),
       alice: randomUUID(),
       bob: randomUUID(),
       outsider: randomUUID(),
@@ -95,7 +96,12 @@ test(
         name,
         email: `${id}@test.invalid`,
         passwordHash: "unused",
-        role: name === "admin" ? ("admin" as const) : ("student" as const),
+        role:
+          name === "admin"
+            ? ("admin" as const)
+            : name === "teacher"
+              ? ("teacher" as const)
+              : ("student" as const),
       })),
     );
     await db.insert(studentsTable).values(
@@ -110,7 +116,7 @@ test(
       await Promise.all(
         Object.entries(ids).map(async ([name, id]) => [
           name,
-          `ac_token=${await generateAccessToken({ sub: id, role: name === "admin" ? "admin" : "student" })}`,
+          `ac_token=${await generateAccessToken({ sub: id, role: name === "admin" ? "admin" : name === "teacher" ? "teacher" : "student" })}`,
         ]),
       ),
     );
@@ -172,7 +178,7 @@ test(
         slug,
         startsAt: new Date(Date.now() + 3600000).toISOString(),
         endsAt: new Date(Date.now() + 7200000).toISOString(),
-        isActive: true,
+        isActive: false,
         password,
         allowedLanguages: [54],
       });
@@ -220,11 +226,213 @@ test(
         );
         assert.equal(response.status, 201);
       }
+      const published = await request(`/${contest!.id}`, "admin", "PUT", {
+        isActive: true,
+      });
+      assert.equal(published.status, 200, await published.text());
       return { contest: contest!, problemId: problemId as string, teamId };
     }
     const individual = await createContest();
     const path = `/${individual.contest.id}`;
     let unlockCookie = "";
+
+    await t.test(
+      "teacher and admin authoring, safe publication, and frozen content",
+      async () => {
+        assert.equal((await request("/limits", "teacher")).status, 200);
+        assert.equal((await request("/limits", "alice")).status, 403);
+        const fixture = await createContest();
+        const base = `/${fixture.contest.id}`;
+        const problemsPath = `${base}/problems`;
+        const problemPath = `${problemsPath}/${fixture.problemId}`;
+        const casesPath = `${problemPath}/testcases`;
+        const body = {
+          title: "Updated sum",
+          statement: "Add two integers.",
+          cpuLimit: 1,
+          memoryLimit: 65536,
+        };
+        assert.equal(
+          (await request(problemPath, "teacher", "PUT", body)).status,
+          200,
+        );
+        assert.equal(
+          (await request(problemPath, "alice", "PUT", body)).status,
+          403,
+        );
+        assert.equal(
+          (
+            await request(problemPath, "teacher", "PUT", {
+              ...body,
+              cpuLimit: 16,
+            })
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              `${path}/problems/${fixture.problemId}`,
+              "teacher",
+              "PUT",
+              body,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (await request(problemsPath, "teacher", "POST", body)).status,
+          400,
+        ); // Unpublish before adding an incomplete problem.
+        assert.equal(
+          (await request(base, "teacher", "PUT", { isActive: false })).status,
+          200,
+        );
+        assert.equal(
+          (
+            await request(base, "teacher", "PUT", {
+              allowedLanguages: [999999],
+            })
+          ).status,
+          400,
+        );
+        const added = await request(problemsPath, "teacher", "POST", body);
+        assert.equal(added.status, 201);
+        const newProblemId = (await added.json()).id;
+        assert.equal(
+          (await request(base, "teacher", "PUT", { isActive: true })).status,
+          400,
+        ); // No cases on new problem.
+        const newCasesPath = `${problemsPath}/${newProblemId}/testcases`;
+        const newCase = await request(newCasesPath, "teacher", "POST", {
+          position: 1,
+          stdin: "",
+          stdout: "",
+          isSample: false,
+        });
+        assert.equal(newCase.status, 201);
+        const newCaseId = (await newCase.json()).id;
+        assert.equal(
+          (await request(base, "teacher", "PUT", { isActive: true })).status,
+          200,
+        );
+        assert.equal(
+          (await request(`${newCasesPath}/${newCaseId}`, "teacher", "DELETE"))
+            .status,
+          400,
+        ); // Last case of a published problem.
+        const cases = (await (await request(casesPath, "teacher")).json())
+          .testCases;
+        const update = {
+          position: 4,
+          stdin: " 1  2\n",
+          stdout: "3\n",
+          isSample: false,
+        };
+        assert.equal(
+          (
+            await request(
+              `${casesPath}/${cases[0].id}`,
+              "teacher",
+              "PUT",
+              update,
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await request(`${casesPath}/${cases[0].id}`, "teacher", "PUT", {
+              ...update,
+              position: 2,
+            })
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              `${newCasesPath}/${cases[0].id}`,
+              "teacher",
+              "PUT",
+              update,
+            )
+          ).status,
+          400,
+        );
+        const updated = (await (await request(casesPath, "teacher")).json())
+          .testCases;
+        assert.equal(updated.at(-1).position, 4);
+        assert.equal(updated.at(-1).stdin, " 1  2\n");
+        assert.equal(
+          (await request(`${casesPath}/${cases[0].id}`, "alice", "DELETE"))
+            .status,
+          403,
+        );
+        assert.equal(
+          (await request(base, "teacher", "PUT", { isActive: false })).status,
+          200,
+        );
+        assert.equal(
+          (await request(`${newCasesPath}/${newCaseId}`, "teacher", "DELETE"))
+            .status,
+          200,
+        );
+        assert.equal(
+          (
+            await request(
+              `${problemsPath}/${newProblemId}`,
+              "teacher",
+              "DELETE",
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (await request(`${casesPath}/${cases[0].id}`, "teacher", "DELETE"))
+            .status,
+          200,
+        );
+        const removedCases = await db
+          .select()
+          .from(testCasesTable)
+          .where(eq(testCasesTable.problemId, newProblemId));
+        assert.equal(removedCases.length, 0);
+        assert.equal(
+          (await request(base, "teacher", "PUT", { isActive: true })).status,
+          200,
+        );
+        await db
+          .update(contestsTable)
+          .set({ startsAt: new Date(Date.now() - 60000) })
+          .where(eq(contestsTable.id, fixture.contest.id));
+        assert.equal(
+          (await request(problemPath, "teacher", "PUT", body)).status,
+          400,
+        );
+        assert.equal(
+          (await request(problemPath, "teacher", "DELETE")).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              `${casesPath}/${cases[1].id}`,
+              "teacher",
+              "PUT",
+              update,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (await request(`${casesPath}/${cases[1].id}`, "teacher", "DELETE"))
+            .status,
+          400,
+        );
+        // This fixture is no longer needed; keep it out of subsequent queue recovery tests.
+      },
+    );
 
     await t.test(
       "metadata hides password; registration and unlock protect all content",

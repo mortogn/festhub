@@ -26,6 +26,7 @@ import {
 } from "@festhub/ui/components/sidebar";
 import {
   CalendarClockIcon,
+  CodeIcon,
   GraduationCapIcon,
   HandHeartIcon,
   LayoutDashboardIcon,
@@ -38,6 +39,7 @@ import { UploadedAvatar } from "./uploaded-image";
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboardIcon },
   { href: "/dashboard/events", label: "Events", icon: CalendarClockIcon },
+  { href: "/dashboard/contests", label: "Contests", icon: CodeIcon },
   { href: "/dashboard/volunteers", label: "Volunteers", icon: HandHeartIcon },
   { href: "/dashboard/venues", label: "Venues", icon: MapPinIcon },
   { href: "/dashboard/students", label: "Students", icon: UsersIcon },
