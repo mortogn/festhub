@@ -11,11 +11,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useAuthContext } from "@festhub/frontend/auth";
-import {
-  ChevronUpIcon,
-  LoaderCircleIcon,
-  XIcon,
-} from "@festhub/ui/icons";
+import { ChevronUpIcon, LoaderCircleIcon, XIcon } from "@festhub/ui/icons";
 import { cn } from "@festhub/ui/lib/utils";
 import { loadPracticeSubmission, loadSubmission } from "@/lib/api";
 
@@ -97,7 +93,10 @@ export function SubmissionTrackerProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     // Browser-only persistence is loaded after hydration, once the user is known.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStore({ owner: userId ?? null, items: userId ? readStored(userId) : [] });
+    setStore({
+      owner: userId ?? null,
+      items: userId ? readStored(userId) : [],
+    });
   }, [userId]);
   useEffect(() => {
     if (!userId || store.owner !== userId) return;
@@ -124,9 +123,9 @@ export function SubmissionTrackerProvider({ children }: PropsWithChildren) {
         const results = await Promise.all(
           latest.current.filter(isPending).map(async (entry) => {
             try {
-              const detail = await (entry.practice
-                ? loadPracticeSubmission
-                : loadSubmission)(entry.contestId, entry.id);
+              const detail = await (
+                entry.practice ? loadPracticeSubmission : loadSubmission
+              )(entry.contestId, entry.id);
               failures.delete(entry.id);
               return {
                 id: entry.id,
@@ -145,7 +144,9 @@ export function SubmissionTrackerProvider({ children }: PropsWithChildren) {
         );
         if (!active) return;
         const updates = new Map(
-          results.flatMap((entry) => (entry ? [[entry.id, entry] as const] : [])),
+          results.flatMap((entry) =>
+            entry ? [[entry.id, entry] as const] : [],
+          ),
         );
         if (updates.size)
           setSubmissions((previous) =>
@@ -171,20 +172,23 @@ export function SubmissionTrackerProvider({ children }: PropsWithChildren) {
     };
   }, [pendingKey, setSubmissions]);
 
-  const track = useCallback<TrackerContext["track"]>((submission) => {
-    const entry: TrackedSubmission = {
-      ...submission,
-      submittedAt: Date.now(),
-      status: "queued",
-      verdict: null,
-    };
-    setSubmissions((previous) =>
-      [entry, ...previous.filter((item) => item.id !== entry.id)].slice(
-        0,
-        MAX_TRACKED,
-      ),
-    );
-  }, [setSubmissions]);
+  const track = useCallback<TrackerContext["track"]>(
+    (submission) => {
+      const entry: TrackedSubmission = {
+        ...submission,
+        submittedAt: Date.now(),
+        status: "queued",
+        verdict: null,
+      };
+      setSubmissions((previous) =>
+        [entry, ...previous.filter((item) => item.id !== entry.id)].slice(
+          0,
+          MAX_TRACKED,
+        ),
+      );
+    },
+    [setSubmissions],
+  );
   const remove = useCallback(
     (id: string) =>
       setSubmissions((previous) => previous.filter((entry) => entry.id !== id)),
@@ -247,17 +251,13 @@ function SubmissionTracker() {
   const accepted = submissions.filter(isAccepted).length;
   const rejected = total - judging - accepted;
   const segment = (count: number) => `${(count / total) * 100}%`;
-  const summary = [
-    judging && "judging",
-    accepted && "AC",
-    rejected && "WA",
-  ]
+  const summary = [judging && "judging", accepted && "AC", rejected && "WA"]
     .filter(Boolean)
     .join(", ");
   return (
     <section
       aria-label="Submission progress"
-      className="fixed right-4 bottom-4 z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card/95 text-card-foreground shadow-lg backdrop-blur"
+      className="fixed right-6 bottom-6 z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-border bg-card/95 text-card-foreground shadow-lg backdrop-blur font-mono"
     >
       {open && (
         <div id="submission-tracker-list" className="border-b">
@@ -311,8 +311,8 @@ function SubmissionTracker() {
         onClick={() => setOpen((value) => !value)}
         className="block w-full outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
       >
-        <span className="flex items-center gap-2.5 px-3 pt-2.5 pb-2 text-xs">
-          <span className="font-semibold">Submissions</span>
+        <span className="flex items-center gap-2.5 px-6 pt-3 pb-2.5 text-xs">
+          <span className="font-medium tracking-wide">Submissions</span>
           <span className="flex flex-1 items-center gap-2 font-semibold">
             {judging > 0 && (
               <span className="flex items-center gap-1 font-medium text-amber-600">
@@ -320,7 +320,7 @@ function SubmissionTracker() {
                 Judging
               </span>
             )}
-            {accepted > 0 && <span className="text-emerald-600">AC</span>}
+            {accepted > 0 && <span className="text-green-600">AC</span>}
             {rejected > 0 && <span className="text-red-600">WA</span>}
           </span>
           <ChevronUpIcon
@@ -341,7 +341,7 @@ function SubmissionTracker() {
           className="flex h-0.5 w-full bg-muted"
         >
           <span
-            className="h-full bg-emerald-500 transition-[width]"
+            className="h-full bg-green-500 transition-[width]"
             style={{ width: segment(accepted) }}
           />
           <span

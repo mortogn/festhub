@@ -44,6 +44,13 @@ import { LoadingBlock } from "./status";
 import { Submissions } from "./submissions";
 import { useSubmissionTracker } from "./submission-tracker";
 import { StandingsTable } from "./standings";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@festhub/ui/components/dialog";
 
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
 export const problemLabel = (position: number) => {
@@ -181,7 +188,9 @@ export function ProblemWorkspace({
                     >
                       {problemLabel(entry.position)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate">{entry.title}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {entry.title}
+                    </span>
                     {practice && entry.solved && (
                       <CheckCircle2Icon
                         aria-label="Solved"
@@ -198,29 +207,31 @@ export function ProblemWorkspace({
                 contestId={contestId}
                 problem={problem}
                 loadSamples={loadSamples}
-              />
-              <SubmissionForm
-                key={`submission-${problem.id}`}
-                contestId={contestId}
-                problem={problem}
-                allowedLanguages={allowedLanguages}
-                canSubmit={canSubmit}
-                practice={practice}
-                submit={submit}
-                onSubmitted={(id) => {
-                  track({
-                    id,
-                    contestId,
-                    practice,
-                    href: contestHref,
-                    contestTitle,
-                    problemLabel: problemLabel(problem.position),
-                    problemTitle: problem.title,
-                  });
-                  setSubmissionId(id);
-                  setRevision((n) => n + 1);
-                  setTab("submissions");
-                }}
+                submissionForm={
+                  <SubmissionForm
+                    key={`submission-${problem.id}`}
+                    contestId={contestId}
+                    problem={problem}
+                    allowedLanguages={allowedLanguages}
+                    canSubmit={canSubmit}
+                    practice={practice}
+                    submit={submit}
+                    onSubmitted={(id) => {
+                      track({
+                        id,
+                        contestId,
+                        practice,
+                        href: contestHref,
+                        contestTitle,
+                        problemLabel: problemLabel(problem.position),
+                        problemTitle: problem.title,
+                      });
+                      setSubmissionId(id);
+                      setRevision((n) => n + 1);
+                      setTab("submissions");
+                    }}
+                  />
+                }
               />
             </div>
           </div>
@@ -249,10 +260,12 @@ function ProblemStatement({
   contestId,
   problem,
   loadSamples,
+  submissionForm,
 }: {
   contestId: string;
   problem: ProblemView;
   loadSamples: SampleLoader;
+  submissionForm?: React.ReactNode;
 }) {
   const loader = useCallback(
     () => loadSamples(contestId, problem.id),
@@ -260,31 +273,36 @@ function ProblemStatement({
   );
   const { data, error, refresh } = usePoll(loader);
   return (
-    <Card>
-      <CardHeader className="gap-3 border-b pb-6">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand font-mono text-lg font-semibold text-brand-foreground">
-            {problemLabel(problem.position)}
-          </span>
-          <CardTitle className="text-2xl font-semibold tracking-tight">
-            {problem.title}
-          </CardTitle>
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
-            <TimerIcon className="size-3.5" />
-            Time limit: {problem.cpuLimitInSeconds} s
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
-            <CodeIcon className="size-3.5" />
-            Memory limit: {problem.memoryLimitInKilobytes / 1024} MiB
-          </span>
-          {!!problem.attempts && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
-              <ClockIcon className="size-3.5" />
-              {problem.attempts} attempt{problem.attempts === 1 ? "" : "s"}
-            </span>
-          )}
+    <Card className="overflow-visible pt-0">
+      <CardHeader className="sticky top-0 bg-card pt-(--card-spacing)">
+        <div className="border-b pb-6 flex items-center justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand font-mono text-lg font-semibold text-brand-foreground">
+                {problemLabel(problem.position)}
+              </span>
+              <CardTitle className="text-2xl font-semibold tracking-tight">
+                {problem.title}
+              </CardTitle>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+                <TimerIcon className="size-3.5" />
+                Time limit: {problem.cpuLimitInSeconds} s
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+                <CodeIcon className="size-3.5" />
+                Memory limit: {problem.memoryLimitInKilobytes / 1024} MiB
+              </span>
+              {!!problem.attempts && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+                  <ClockIcon className="size-3.5" />
+                  {problem.attempts} attempt{problem.attempts === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+          </div>
+          {submissionForm}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -353,66 +371,76 @@ function SubmissionForm({
   const languageCode = languages?.some((entry) => String(entry.id) === language)
     ? language
     : String(languages?.[0]?.id ?? "");
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <SendIcon className="size-4 text-brand" />
-          Submit a solution
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && <ErrorState message={error} retry={refresh} />}
-        {!canSubmit && (
-          <p className="rounded-xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
-            {practice
-              ? "Sign in as a student to submit practice solutions."
-              : "Submissions are available to participants during the contest."}
-          </p>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="language">Language</Label>
-          <Select
-            value={languageCode}
-            onValueChange={(value) => {
-              setLanguage(value);
-              setPreferredLanguage(user?.id, value);
-            }}
-            disabled={!languages?.length}
-          >
-            <SelectTrigger id="language" className="w-full sm:w-80">
-              <SelectValue
-                placeholder={
-                  data ? "No allowed languages" : "Loading languages…"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {languages?.map((entry) => (
-                <SelectItem key={entry.id} value={String(entry.id)}>
-                  {entry.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>
+          <SendIcon />
+          Submit
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[calc(100dvh-4rem)] w-full sm:max-w-160 md:max-w-180  overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold ">
+            <SendIcon className="size-4 text-brand" />
+            Submit a solution
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {error && <ErrorState message={error} retry={refresh} />}
+          {!canSubmit && (
+            <p className="rounded-xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
+              {practice
+                ? "Sign in as a student to submit practice solutions."
+                : "Submissions are available to participants during the contest."}
+            </p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="language">Language</Label>
+            <Select
+              value={languageCode}
+              onValueChange={(value) => {
+                setLanguage(value);
+                setPreferredLanguage(user?.id, value);
+              }}
+              disabled={!languages?.length}
+            >
+              <SelectTrigger id="language" className="w-full sm:w-80">
+                <SelectValue
+                  placeholder={
+                    data ? "No allowed languages" : "Loading languages…"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {languages?.map((entry) => (
+                  <SelectItem key={entry.id} value={String(entry.id)}>
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {user && languageCode && (
+            <CodeInput
+              key={`${user.id}:${contestId}:${problem.id}:${languageCode}`}
+              draftKey={`festhub:code:${user.id}:${contestId}:${problem.id}:${languageCode}`}
+              contestId={contestId}
+              problemId={problem.id}
+              languageCode={Number(languageCode)}
+              canSubmit={canSubmit}
+              submit={submit}
+              onSubmitted={(id) => {
+                setPreferredLanguage(user.id, languageCode);
+                onSubmitted(id);
+              }}
+            />
+          )}
         </div>
-        {user && languageCode && (
-          <CodeInput
-            key={`${user.id}:${contestId}:${problem.id}:${languageCode}`}
-            draftKey={`festhub:code:${user.id}:${contestId}:${problem.id}:${languageCode}`}
-            contestId={contestId}
-            problemId={problem.id}
-            languageCode={Number(languageCode)}
-            canSubmit={canSubmit}
-            submit={submit}
-            onSubmitted={(id) => {
-              setPreferredLanguage(user.id, languageCode);
-              onSubmitted(id);
-            }}
-          />
-        )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -477,7 +505,7 @@ function CodeInput({
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
-          className="min-h-80 resize-y rounded-xl border-slate-800 bg-slate-950 p-4 font-mono text-sm leading-relaxed text-slate-100 placeholder:text-slate-500 dark:bg-slate-950"
+          className="min-h-80 resize-y rounded-md border-border bg-secondary p-4 font-mono text-sm leading-relaxed text-secondary-foreground placeholder:text-muted-foreground "
           placeholder="Write or paste your solution here…"
           onChange={(event) => {
             const value = event.target.value;
