@@ -181,7 +181,7 @@ function EventCards({
   pendingRegistrations: ReturnType<typeof usePendingRegistrations>;
   eventMetadata: Resource<Events>;
 }) {
-  const now = new Date();
+  const [now] = useState(() => new Date());
 
   return (
     <div className="@container">
