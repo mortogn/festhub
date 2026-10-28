@@ -1,7 +1,7 @@
 import { Context, Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { signInSchema, signUpSchema } from "@festhub/shared/validation";
-import { db } from "@festhub/db";
+import { db, isDBError } from "@festhub/db";
 import {
   usersTable,
   studentsTable,
@@ -180,20 +180,30 @@ const app = new Hono()
           throw new InternalServerErrorException("Failed to create a user");
         }
 
-        if (input.role == "teacher") {
-          await tx.insert(teachersTable).values({
-            teacherId: input.teacherId,
-            department: input.department,
-            userId: newUser.id,
-          });
-        } else {
-          await tx.insert(studentsTable).values({
-            studentId: input.studentId,
-            department: input.department,
-            batch: input.batch,
-            userId: newUser.id,
-            is_hsc: input.is_hsc,
-          });
+        try {
+          if (input.role == "teacher") {
+            await tx.insert(teachersTable).values({
+              teacherId: input.teacherId,
+              department: input.department,
+              userId: newUser.id,
+            });
+          } else {
+            await tx.insert(studentsTable).values({
+              studentId: input.studentId,
+              department: input.department,
+              batch: input.batch,
+              userId: newUser.id,
+              is_hsc: input.is_hsc,
+            });
+          }
+        } catch (err) {
+          if (isDBError(err)) {
+            if (err.cause.code === "23505") {
+              throw new BadRequestException(
+                `${input.role === "teacher" ? "Teacher" : "Student"} ID must be unique. The provided ID already exists.`,
+              );
+            }
+          }
         }
 
         return newUser;
