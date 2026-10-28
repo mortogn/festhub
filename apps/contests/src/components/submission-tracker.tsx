@@ -12,15 +12,12 @@ import {
 } from "react";
 import { useAuthContext } from "@festhub/frontend/auth";
 import {
-  CheckCircle2Icon,
   ChevronUpIcon,
-  CircleXIcon,
   LoaderCircleIcon,
   XIcon,
 } from "@festhub/ui/icons";
 import { cn } from "@festhub/ui/lib/utils";
 import { loadPracticeSubmission, loadSubmission } from "@/lib/api";
-import { VerdictBadge } from "./submissions";
 
 type SubmissionStatus = "queued" | "processing" | "completed" | "error";
 export type TrackedSubmission = {
@@ -218,24 +215,25 @@ export function useSubmissionTracker() {
   return context;
 }
 
-function Stat({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: number;
-  className?: string;
-}) {
+function RowStatus({ entry }: { entry: TrackedSubmission }) {
+  if (isPending(entry))
+    return (
+      <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+        <LoaderCircleIcon
+          aria-hidden
+          className="size-3.5 animate-spin motion-reduce:animate-none"
+        />
+        Judging
+      </span>
+    );
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums",
-        className,
+        "font-mono text-xs font-semibold",
+        isAccepted(entry) ? "text-emerald-600" : "text-red-600",
       )}
     >
-      <span className="font-semibold">{value}</span>
-      {label}
+      {entry.status === "error" ? "ERR" : (entry.verdict ?? "WA")}
     </span>
   );
 }
@@ -249,27 +247,86 @@ function SubmissionTracker() {
   const accepted = submissions.filter(isAccepted).length;
   const rejected = total - judging - accepted;
   const segment = (count: number) => `${(count / total) * 100}%`;
+  const summary = [
+    judging && "judging",
+    accepted && "AC",
+    rejected && "WA",
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <section
       aria-label="Submission progress"
-      className="fixed right-4 bottom-4 z-40 w-88 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-lg"
+      className="fixed right-4 bottom-4 z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card/95 text-card-foreground shadow-lg backdrop-blur"
     >
+      {open && (
+        <div id="submission-tracker-list" className="border-b">
+          <ul className="max-h-64 overflow-y-auto py-1">
+            {submissions.map((entry) => (
+              <li
+                key={entry.id}
+                className="group flex items-center gap-2 py-1.5 pr-1.5 pl-3 hover:bg-muted/50"
+              >
+                <Link
+                  href={entry.href}
+                  className="min-w-0 flex-1 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <span className="block truncate text-[13px] font-medium">
+                    {entry.problemLabel}. {entry.problemTitle}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {entry.practice ? "Practice · " : ""}
+                    {entry.contestTitle}
+                  </span>
+                </Link>
+                <RowStatus entry={entry} />
+                <button
+                  type="button"
+                  aria-label={`Remove ${entry.problemLabel}. ${entry.problemTitle} from the list`}
+                  onClick={() => remove(entry.id)}
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {judging < total && (
+            <div className="border-t px-3 py-1.5 text-right">
+              <button
+                type="button"
+                onClick={clearFinished}
+                className="rounded-md text-[11px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Clear finished
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <button
         type="button"
         aria-expanded={open}
         aria-controls="submission-tracker-list"
         onClick={() => setOpen((value) => !value)}
-        className="block w-full space-y-2.5 px-4 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        className="block w-full outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
       >
-        <span className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">
-            {judging
-              ? `Judging ${judging} of ${total} submission${total === 1 ? "" : "s"}`
-              : "All submissions judged"}
+        <span className="flex items-center gap-2.5 px-3 pt-2.5 pb-2 text-xs">
+          <span className="font-semibold">Submissions</span>
+          <span className="flex flex-1 items-center gap-2 font-semibold">
+            {judging > 0 && (
+              <span className="flex items-center gap-1 font-medium text-amber-600">
+                <span className="size-1.5 animate-pulse rounded-full bg-amber-500 motion-reduce:animate-none" />
+                Judging
+              </span>
+            )}
+            {accepted > 0 && <span className="text-emerald-600">AC</span>}
+            {rejected > 0 && <span className="text-red-600">WA</span>}
           </span>
           <ChevronUpIcon
+            aria-hidden
             className={cn(
-              "size-4 shrink-0 text-muted-foreground transition-transform",
+              "size-3.5 shrink-0 text-muted-foreground transition-transform",
               open && "rotate-180",
             )}
           />
@@ -280,8 +337,8 @@ function SubmissionTracker() {
           aria-valuemin={0}
           aria-valuemax={total}
           aria-valuenow={total - judging}
-          aria-valuetext={`${total} submitted, ${judging} judging, ${accepted} accepted, ${rejected} rejected`}
-          className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+          aria-valuetext={summary}
+          className="flex h-0.5 w-full bg-muted"
         >
           <span
             className="h-full bg-emerald-500 transition-[width]"
@@ -296,86 +353,7 @@ function SubmissionTracker() {
             style={{ width: segment(judging) }}
           />
         </span>
-        <span className="flex flex-wrap gap-1.5">
-          <Stat label="submitted" value={total} className="bg-muted" />
-          <Stat
-            label="judging"
-            value={judging}
-            className="bg-amber-50 text-amber-700"
-          />
-          <Stat
-            label="accepted"
-            value={accepted}
-            className="bg-emerald-50 text-emerald-700"
-          />
-          <Stat
-            label="rejected"
-            value={rejected}
-            className="bg-red-50 text-red-700"
-          />
-        </span>
       </button>
-      {open && (
-        <div id="submission-tracker-list" className="border-t">
-          <ul className="max-h-72 divide-y overflow-y-auto">
-            {submissions.map((entry) => (
-              <li
-                key={entry.id}
-                className="flex items-center gap-2 py-2 pr-2 pl-4"
-              >
-                {isPending(entry) ? (
-                  <LoaderCircleIcon
-                    aria-hidden
-                    className="size-4 shrink-0 animate-spin text-amber-500 motion-reduce:animate-none"
-                  />
-                ) : isAccepted(entry) ? (
-                  <CheckCircle2Icon
-                    aria-hidden
-                    className="size-4 shrink-0 text-emerald-600"
-                  />
-                ) : (
-                  <CircleXIcon
-                    aria-hidden
-                    className="size-4 shrink-0 text-red-600"
-                  />
-                )}
-                <Link
-                  href={entry.href}
-                  className="min-w-0 flex-1 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <span className="block truncate text-sm font-medium">
-                    {entry.problemLabel}. {entry.problemTitle}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {entry.practice ? "Practice · " : ""}
-                    {entry.contestTitle}
-                  </span>
-                </Link>
-                <VerdictBadge status={entry.status} verdict={entry.verdict} />
-                <button
-                  type="button"
-                  aria-label={`Remove ${entry.problemLabel}. ${entry.problemTitle} from the list`}
-                  onClick={() => remove(entry.id)}
-                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <XIcon className="size-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          {judging < total && (
-            <div className="border-t px-4 py-2 text-right">
-              <button
-                type="button"
-                onClick={clearFinished}
-                className="rounded-md text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                Clear finished
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }
