@@ -22,3 +22,4 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.4.3'
   - eslint-config-next@16.4.3
   - next@16.4.3
+  - lucide-react@1.63.0
