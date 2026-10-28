@@ -39,8 +39,8 @@ To make it easier for university and organizers to manage and create new events 
 
 ### Deployed Links
 
-- Student: student.festhub.morto.dev
-- Teacher: teacher.festhub.morto.dev
-- CP: contests.festhub.morto.dev
-- API: api.festhub.morto.dev
-- Judge0: judge0.festhub.morto.dev
+- Student: https://student.festhub.morto.dev
+- Teacher: https://teacher.festhub.morto.dev
+- CP: https://contests.festhub.morto.dev
+- API: https://api.festhub.morto.dev
+- Judge0: https://judge0.festhub.morto.dev
