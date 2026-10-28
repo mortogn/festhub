@@ -44,7 +44,10 @@ function formatDateTime(value: string | Date | null) {
     timeStyle: "short",
   });
 }
-function formatDuration(start: string | Date | null, end: string | Date | null) {
+function formatDuration(
+  start: string | Date | null,
+  end: string | Date | null,
+) {
   if (!start || !end) return null;
   const minutes = Math.max(
     0,
@@ -79,10 +82,6 @@ export function PracticeList() {
               Curated problems you can solve at your own pace.
             </p>
           </div>
-          <Badge variant="outline" className="gap-1.5">
-            <CheckCircle2Icon />
-            Progress is saved automatically
-          </Badge>
         </div>
         {!data && !error ? (
           <LoadingBlock label="Loading practice…">
@@ -93,7 +92,7 @@ export function PracticeList() {
             </div>
           </LoadingBlock>
         ) : data?.problemSets.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {data.problemSets.map((contest) => (
               <PracticeCard key={contest.id} contest={contest} />
             ))}
@@ -132,7 +131,7 @@ export function PracticeList() {
             ))}
           </div>
         ) : data?.pastContests.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {data.pastContests.map((contest) => (
               <PracticeCard key={contest.id} contest={contest} past />
             ))}
@@ -171,7 +170,7 @@ function PracticeCard({
           {contest.title}
         </CardTitle>
         {description && (
-          <CardDescription className="line-clamp-2">
+          <CardDescription className="line-clamp-3">
             {description}
           </CardDescription>
         )}
