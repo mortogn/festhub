@@ -44,6 +44,5 @@ export {
   ChevronUpIcon,
   CircleXIcon,
   LoaderCircleIcon,
-
-  CalendarArr
+  CalendarArrowRightIcon,
 } from "lucide-react";

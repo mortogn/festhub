@@ -52,6 +52,7 @@ import { ImageUpload } from "./image-upload";
 import { UploadedImage } from "./uploaded-image";
 import { DeleteButton } from "./delete-button";
 import {
+  CalendarArrowRightIcon,
   CalendarClockIcon,
   CodeIcon,
   QrCodeIcon,
@@ -250,21 +251,30 @@ function EventCards({
             </div>
             <div className="mt-4 space-y-1 text-sm leading-relaxed text-muted-foreground">
               <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger className="block">
                   <div className="flex items-center gap-2">
                     <RotateCwClock className="size-5" />
                     {getDuration(event.startsAt, event.endsAt)}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent side="right">
                   Duration of the event is{" "}
                   {getDuration(event.startsAt, event.endsAt)}
                 </TooltipContent>
               </Tooltip>
-              <div className="flex items-center gap-2">
-                <CalendarClockIcon className="size-5" />
-                {formatDateTime(event.endsAt)}
-              </div>
+              <Tooltip>
+                <TooltipTrigger className="block">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarArrowRightIcon className="size-5" />
+                      {formatDateTime(event.endsAt)}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Event ends on this date
+                </TooltipContent>
+              </Tooltip>
             </div>
             {event.venue && (
               <p className="mt-2 text-sm break-words text-muted-foreground">
