@@ -14,6 +14,25 @@ import { BadRequestException } from "../../exceptions/bad-request-exception.js";
 import { throwOnNotAParticipant } from "./_helper.js";
 
 export type Contest = typeof contestsTable.$inferSelect;
+export type Participant = Awaited<
+  ReturnType<typeof throwOnNotAParticipant>
+> | null;
+export type ContestAccessOptions = {
+  dbClient?: DBClient;
+  lock?: boolean;
+  content?: boolean;
+  skipPassword?: boolean;
+};
+export type ContestAccessResult = {
+  contest: Contest;
+  participant: Participant;
+};
+export type ContestAccessCheck = <E extends AppVars>(
+  c: Context<E>,
+  contestId: string,
+  options?: ContestAccessOptions,
+) => Promise<ContestAccessResult>;
+
 export const isStaff = <E extends AppVars>(c: Context<E>) =>
   c.var.user.authenticated && ["teacher", "admin"].includes(c.var.user.role);
 const fingerprint = (value: string) =>
@@ -29,7 +48,8 @@ export async function hasContestAccess<E extends AppVars>(
   c: Context<E>,
   contest: Contest,
 ) {
-  if (isStaff(c) || !contest.password) return true;
+  if (contest.kind !== "official" || isStaff(c) || !contest.password)
+    return true;
   const user = c.var.user;
   const token = getCookie(c, cookieName(contest.id));
   if (!user.authenticated || !token) return false;
@@ -53,7 +73,7 @@ export async function unlockContest<E extends AppVars>(
 ) {
   const user = c.var.user;
   if (!user.authenticated) throw new AuthException();
-  if (!contest.password) return;
+  if (contest.kind !== "official" || !contest.password) return;
   if (!(await bcrypt.compare(password, contest.password)))
     throw new ForbiddenException("Incorrect contest password");
   const token = await sign(
@@ -76,15 +96,10 @@ export async function unlockContest<E extends AppVars>(
   });
 }
 
-export async function requireContestAccess<E extends AppVars>(
+export async function requireOfficialContestAccess<E extends AppVars>(
   c: Context<E>,
   contestId: string,
-  options: {
-    dbClient?: DBClient;
-    lock?: boolean;
-    content?: boolean;
-    skipPassword?: boolean;
-  } = {},
+  options: ContestAccessOptions = {},
 ) {
   const user = c.var.user;
   if (!user.authenticated) throw new AuthException();
@@ -95,6 +110,7 @@ export async function requireContestAccess<E extends AppVars>(
     .where(
       and(
         eq(contestsTable.id, contestId),
+        eq(contestsTable.kind, "official"),
         ...(!isStaff(c) ? [eq(contestsTable.isActive, true)] : []),
       ),
     );
@@ -109,9 +125,42 @@ export async function requireContestAccess<E extends AppVars>(
   });
   if (!options.skipPassword && !(await hasContestAccess(c, contest)))
     throw new ForbiddenException("Enter the contest password to continue");
-  if (options.content !== false && contest.startsAt > new Date())
+  if (options.content !== false && contest.startsAt && contest.startsAt > new Date())
     throw new BadRequestException("Contest has not started yet");
   return { contest, participant };
+}
+
+export const requireContestAccess = requireOfficialContestAccess;
+
+/**
+ * Practice access covers problem sets and official contests after they end.
+ * It intentionally never requires event registration or a contest password.
+ */
+export async function requirePracticeAccess<E extends AppVars>(
+  c: Context<E>,
+  contestId: string,
+  options: { dbClient?: DBClient; lock?: boolean } = {},
+) {
+  const user = c.var.user;
+  if (!user.authenticated) throw new AuthException();
+  const client = options.dbClient ?? db;
+  const query = client
+    .select()
+    .from(contestsTable)
+    .where(eq(contestsTable.id, contestId));
+  const [contest] = await (options.lock ? query.for("update") : query);
+  if (!contest) throw new NotFoundException("Practice not found");
+  if (isStaff(c)) return { contest, participant: null as Participant };
+
+  if (user.role !== "student") throw new ForbiddenException();
+  if (!contest.isActive) throw new NotFoundException("Practice not found");
+  if (contest.kind === "official") {
+    if (!contest.endsAt || contest.endsAt > new Date())
+      throw new NotFoundException(
+        "Practice is available after the contest ends",
+      );
+  }
+  return { contest, participant: null as Participant };
 }
 
 export async function safeContest<E extends AppVars>(
@@ -121,12 +170,15 @@ export async function safeContest<E extends AppVars>(
   const { password, ...safe } = contest;
   return {
     ...safe,
-    hasPassword: Boolean(password),
+    hasPassword: contest.kind === "official" && Boolean(password),
     isLocked: !(await hasContestAccess(c, contest)),
   };
 }
 
-export function requireEditableContest(contest: Contest) {
+export function requireEditableContest(contest: Contest, practice = false) {
+  if (practice) return;
+  if (contest.kind !== "official" || !contest.startsAt)
+    throw new BadRequestException("Contest content cannot be edited");
   if (contest.startsAt <= new Date())
     throw new BadRequestException(
       "Problems and test cases cannot change after the contest starts",

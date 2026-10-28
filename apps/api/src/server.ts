@@ -21,6 +21,7 @@ import teamInvitesRoute from "./routes/team-invites.js";
 import usersRoute from "./routes/users.js";
 import uploadRoute from "./routes/upload.js";
 import contestRoute from "./routes/contests/index.js";
+import practiceRoute from "./routes/practice/index.js";
 import { closeSubmissionQueue } from "./lib/submission-queue.js";
 import { pool } from "@festhub/db";
 
@@ -69,6 +70,7 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/users", usersRoute)
   .route("/upload", uploadRoute)
   .route("/contests", contestRoute)
+  .route("/practice", practiceRoute)
   .get("/hello", async (c) => c.text("World"));
 
 app.onError((err, c) => {

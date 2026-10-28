@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   integer,
   index,
   pgEnum,
@@ -10,6 +11,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { eventsTable } from "./events.js";
 import { usersTable } from "./users.js";
 import { teamsTable } from "./teams.js";
@@ -23,22 +25,45 @@ export const submissionVerdict = pgEnum("submission_verdict", [
   "MLE",
 ]);
 
-export const contestsTable = pgTable("contests", {
-  id: uuid().primaryKey().defaultRandom(),
-  slug: text().unique().notNull(),
-  title: text().notNull(),
-  description: text(),
-  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => eventsTable.id)
-    .unique(),
+export const contestKind = pgEnum("contest_kind", ["official", "problem_set"]);
 
-  allowedLanguages: integer().array(),
-  isActive: boolean("is_active").notNull().default(false),
-  password: text("password"),
-});
+export const contestsTable = pgTable(
+  "contests",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    slug: text().unique().notNull(),
+    title: text().notNull(),
+    description: text(),
+    kind: contestKind().notNull().default("official"),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    eventId: uuid("event_id")
+      .references(() => eventsTable.id)
+      .unique(),
+
+    allowedLanguages: integer().array(),
+    isActive: boolean("is_active").notNull().default(false),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "contests_official_event_check",
+      sql`${table.kind} <> 'official' OR ${table.eventId} IS NOT NULL`,
+    ),
+    check(
+      "contests_official_schedule_check",
+      sql`${table.kind} <> 'official' OR (${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL)`,
+    ),
+    check(
+      "contests_problem_set_shape_check",
+      sql`${table.kind} <> 'problem_set' OR (${table.eventId} IS NULL AND ${table.startsAt} IS NULL AND ${table.endsAt} IS NULL)`,
+    ),
+    index().on(table.kind, table.isActive),
+  ],
+);
 
 export const problemsTable = pgTable(
   "problems",

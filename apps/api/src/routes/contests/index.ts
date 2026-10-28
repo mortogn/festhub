@@ -31,7 +31,7 @@ import { getJudgeLimits } from "./_helper.js";
 import { requirePublishableContest, validateLanguages } from "./authoring.js";
 import {
   isStaff,
-  requireContestAccess,
+  requireOfficialContestAccess,
   safeContest,
   unlockContest,
 } from "./access.js";
@@ -52,6 +52,7 @@ const app = new Hono<AppVars>()
       ? await db
           .select()
           .from(contestsTable)
+          .where(eq(contestsTable.kind, "official"))
           .orderBy(desc(contestsTable.startsAt))
       : (
           await db
@@ -63,6 +64,7 @@ const app = new Hono<AppVars>()
             )
             .where(
               and(
+                eq(contestsTable.kind, "official"),
                 eq(contestsTable.isActive, true),
                 eq(participantsTable.studentId, user.id),
                 eq(participantsTable.registrationStatus, "accepted"),
@@ -87,6 +89,7 @@ const app = new Hono<AppVars>()
         .where(
           and(
             eq(contestsTable.slug, slug),
+            eq(contestsTable.kind, "official"),
             ...(!isStaff(c) ? [eq(contestsTable.isActive, true)] : []),
           ),
         );
@@ -100,7 +103,7 @@ const app = new Hono<AppVars>()
     zValidator("param", z.object({ contestId: z.uuid() })),
     zValidator("json", unlockContestSchema),
     async (c) => {
-      const { contest } = await requireContestAccess(
+      const { contest } = await requireOfficialContestAccess(
         c,
         c.req.valid("param").contestId,
         { content: false, skipPassword: true },
@@ -170,7 +173,10 @@ const app = new Hono<AppVars>()
 
     const user = c.var.user;
 
-    let whereClauses = [eq(contestsTable.id, id)];
+    const whereClauses = [
+      eq(contestsTable.id, id),
+      eq(contestsTable.kind, "official"),
+    ];
 
     if (!user.authenticated || !["teacher", "admin"].includes(user.role)) {
       whereClauses.push(eq(contestsTable.isActive, true));
@@ -203,12 +209,13 @@ const app = new Hono<AppVars>()
           .where(eq(contestsTable.id, id))
           .for("update");
 
-        if (!contest) throw new BadRequestException("Contest not found");
+        if (!contest || contest.kind !== "official")
+          throw new BadRequestException("Contest not found");
         if (body.isActive === true && !contest.isActive)
           await requirePublishableContest(tx, id);
 
         if (
-          contest.startsAt <= new Date() &&
+          (contest.startsAt ?? new Date(0)) <= new Date() &&
           (body.startsAt !== undefined ||
             body.endsAt !== undefined ||
             body.eventId !== undefined ||
@@ -270,7 +277,7 @@ const app = new Hono<AppVars>()
         if (
           body.endsAt &&
           !body.startsAt &&
-          new Date(body.endsAt) <= new Date(contest.startsAt)
+          new Date(body.endsAt) <= new Date(contest.startsAt ?? 0)
         ) {
           throw new BadRequestException(
             "Contest end date cannot be before start date",
@@ -280,7 +287,7 @@ const app = new Hono<AppVars>()
         if (
           body.startsAt &&
           !body.endsAt &&
-          new Date(body.startsAt) >= new Date(contest.endsAt)
+          new Date(body.startsAt) >= new Date(contest.endsAt ?? 0)
         ) {
           throw new BadRequestException(
             "Contest start date cannot be after end date",

@@ -39,6 +39,8 @@ function formatDateTime(value: number) {
     timeStyle: "short",
   });
 }
+const time = (value: string | Date | null) =>
+  value ? new Date(value).getTime() : 0;
 
 function plainText(markdown: string) {
   return markdown
@@ -58,18 +60,12 @@ export function ContestList() {
   const { data, error, refresh } = usePoll(loadContests, 30000);
   const upcoming =
     data?.contests
-      .filter((contest) => new Date(contest.endsAt).getTime() > now)
-      .sort(
-        (a, b) =>
-          new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-      ) ?? [];
+      .filter((contest) => time(contest.endsAt) > now)
+      .sort((a, b) => time(a.startsAt) - time(b.startsAt)) ?? [];
   const previous =
     data?.contests
-      .filter((contest) => new Date(contest.endsAt).getTime() <= now)
-      .sort(
-        (a, b) =>
-          new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
-      ) ?? [];
+      .filter((contest) => time(contest.endsAt) <= now)
+      .sort((a, b) => time(b.startsAt) - time(a.startsAt)) ?? [];
 
   return (
     <div className="space-y-12">
@@ -157,8 +153,8 @@ function UpcomingContestCard({
   contest: Contest;
   now: number;
 }) {
-  const starts = new Date(contest.startsAt).getTime();
-  const ends = new Date(contest.endsAt).getTime();
+  const starts = time(contest.startsAt);
+  const ends = time(contest.endsAt);
   const phase = contestPhase(starts, ends, now);
   const description = plainText(contest.description ?? "");
   return (
@@ -211,8 +207,8 @@ function UpcomingContestCard({
 }
 
 function PreviousContestRow({ contest }: { contest: Contest }) {
-  const starts = new Date(contest.startsAt).getTime();
-  const ends = new Date(contest.endsAt).getTime();
+  const starts = time(contest.startsAt);
+  const ends = time(contest.endsAt);
   return (
     <Link
       href={`/contests/${contest.slug}`}

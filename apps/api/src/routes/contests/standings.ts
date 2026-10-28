@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import { calculateStandings } from "@festhub/shared/contest";
 import type { AppVars } from "../../types/variables.js";
 import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
+import { NotFoundException } from "../../exceptions/not-found-exception.js";
 import { requireContestAccess } from "./access.js";
 
 const app = new Hono<AppVars>().get(
@@ -23,6 +24,8 @@ const app = new Hono<AppVars>().get(
   async (c) => {
     const { contestId } = c.req.valid("param");
     const { contest } = await requireContestAccess(c, contestId);
+    if (!contest.startsAt || !contest.endsAt || !contest.eventId)
+      throw new NotFoundException("Contest schedule not found");
     const [event] = await db
       .select({ teamBased: eventsTable.teamBased })
       .from(eventsTable)

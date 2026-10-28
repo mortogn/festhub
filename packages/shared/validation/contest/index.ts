@@ -8,6 +8,8 @@ const contestPasswordSchema = z
     (value) => new TextEncoder().encode(value).length <= 72,
     "Contest password must not exceed 72 UTF-8 bytes",
   );
+export const contestKindSchema = z.enum(["official", "problem_set"]);
+export type ContestKind = z.infer<typeof contestKindSchema>;
 const baseContestSchema = z.object({
   eventId: z.uuid(),
   title: z.string().trim().min(1),
@@ -39,6 +41,28 @@ export const updateContestSchema = baseContestSchema
       ctx.addIssue({
         code: "custom",
         message: "Entire contest update object is empty",
+      });
+    }
+  });
+
+const problemSetFields = {
+  title: z.string().trim().min(1),
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  description: z.string().optional(),
+  allowedLanguages: z.array(z.int().positive()).min(1).nullable().optional(),
+  isActive: z.boolean().optional(),
+};
+
+export const createProblemSetSchema = z.object(problemSetFields);
+
+export const updateProblemSetSchema = z
+  .object(problemSetFields)
+  .partial()
+  .superRefine((val, ctx) => {
+    if (Object.values(val).every((v) => v === undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Entire problem set update object is empty",
       });
     }
   });

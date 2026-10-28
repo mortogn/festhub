@@ -52,6 +52,16 @@ export function Shell({ children }: PropsWithChildren) {
               >
                 Contests
               </Link>
+              <Link
+                href="/practice"
+                className={cn(
+                  navLink,
+                  pathname.startsWith("/practice") &&
+                    "bg-muted text-foreground",
+                )}
+              >
+                Practice
+              </Link>
               {eventWebUrl && (
                 <a href={eventWebUrl} className={navLink}>
                   Events

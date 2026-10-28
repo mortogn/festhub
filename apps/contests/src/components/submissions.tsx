@@ -20,8 +20,10 @@ import {
   TableRow,
 } from "@festhub/ui/components/table";
 import {
-  loadSubmissions,
   loadSubmission,
+  loadSubmissions,
+  loadPracticeSubmission,
+  loadPracticeSubmissions,
   type Problem,
   type SubmissionDetail,
 } from "@/lib/api";
@@ -29,7 +31,9 @@ import { usePoll } from "@/lib/use-poll";
 import { ErrorState } from "./shell";
 import { LoadingBlock } from "./status";
 
-const listInterval = (data: Awaited<ReturnType<typeof loadSubmissions>>) =>
+const listInterval = (data: {
+  submissions: Array<{ status: string }>;
+}) =>
   data.submissions.some(
     (entry) => entry.status === "queued" || entry.status === "processing",
   )
@@ -69,12 +73,14 @@ export function Submissions({
   selectedId,
   onSelect,
   revision,
+  practice = false,
 }: {
   contestId: string;
   problems: Problem[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   revision: number;
+  practice?: boolean;
 }) {
   const [page, setPage] = useState(1);
   // Revision remounts the list after a new submission, including when it was already on page 1.
@@ -87,6 +93,7 @@ export function Submissions({
         page={page}
         setPage={setPage}
         onSelect={onSelect}
+        practice={practice}
       />
       {selectedId && (
         <SubmissionPanel
@@ -94,6 +101,7 @@ export function Submissions({
           contestId={contestId}
           id={selectedId}
           onClose={() => onSelect(null)}
+          practice={practice}
         />
       )}
     </div>
@@ -105,16 +113,21 @@ function SubmissionList({
   page,
   setPage,
   onSelect,
+  practice,
 }: {
   contestId: string;
   problems: Problem[];
   page: number;
   setPage: (page: number) => void;
   onSelect: (id: string) => void;
+  practice: boolean;
 }) {
   const loader = useCallback(
-    () => loadSubmissions(contestId, page),
-    [contestId, page],
+    () =>
+      practice
+        ? loadPracticeSubmissions(contestId, page)
+        : loadSubmissions(contestId, page),
+    [contestId, page, practice],
   );
   const { data, error, refresh } = usePoll(loader, listInterval);
   return (
@@ -122,7 +135,9 @@ function SubmissionList({
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Your submissions</CardTitle>
         <CardDescription>
-          For team contests, this includes submissions from your teammates.
+          {practice
+            ? "Practice submissions are private to your account."
+            : "For team contests, this includes submissions from your teammates."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -227,14 +242,19 @@ function SubmissionPanel({
   contestId,
   id,
   onClose,
+  practice,
 }: {
   contestId: string;
   id: string;
   onClose: () => void;
+  practice: boolean;
 }) {
   const loader = useCallback(
-    () => loadSubmission(contestId, id),
-    [contestId, id],
+    () =>
+      practice
+        ? loadPracticeSubmission(contestId, id)
+        : loadSubmission(contestId, id),
+    [contestId, id, practice],
   );
   const { data, error, refresh } = usePoll(loader, 2000, isPending);
   return (

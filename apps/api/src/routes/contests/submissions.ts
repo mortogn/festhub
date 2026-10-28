@@ -12,10 +12,13 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { AppVars } from "../../types/variables.js";
 import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware.js";
 import { NotFoundException } from "../../exceptions/not-found-exception.js";
-import { isStaff, requireContestAccess } from "./access.js";
-import type { throwOnNotAParticipant } from "./_helper.js";
+import {
+  isStaff,
+  requireOfficialContestAccess,
+  type ContestAccessCheck,
+  type Participant,
+} from "./access.js";
 
-type Participant = Awaited<ReturnType<typeof throwOnNotAParticipant>> | null;
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -70,77 +73,85 @@ export async function listSubmissions<E extends AppVars>(
   };
 }
 
-const app = new Hono<AppVars>()
-  .use("*", enforceAuthMiddleware())
-  .get(
-    "/",
-    zValidator("param", z.object({ contestId: z.uuid() })),
-    zValidator("query", paginationSchema),
-    async (c) => {
-      const { contestId } = c.req.valid("param");
-      const { participant } = await requireContestAccess(c, contestId);
-      return c.json(
-        await listSubmissions(c, contestId, participant, c.req.valid("query")),
-      );
-    },
-  )
-  .get(
-    "/:submissionId",
-    zValidator(
-      "param",
-      z.object({ contestId: z.uuid(), submissionId: z.uuid() }),
-    ),
-    async (c) => {
-      const { contestId, submissionId } = c.req.valid("param");
-      const { participant } = await requireContestAccess(c, contestId);
-      const [submission] = await db
-        .select({ ...summary, sourceCode: submissionsTable.sourceCode })
-        .from(submissionsTable)
-        .innerJoin(
-          problemsTable,
-          eq(problemsTable.id, submissionsTable.problemId),
-        )
-        .where(
-          and(
-            eq(problemsTable.contestId, contestId),
-            eq(submissionsTable.id, submissionId),
-            ...visibility(c, participant),
+export function createSubmissionsRoute(access: ContestAccessCheck) {
+  return new Hono<AppVars>()
+    .use("*", enforceAuthMiddleware())
+    .get(
+      "/",
+      zValidator("param", z.object({ contestId: z.uuid() })),
+      zValidator("query", paginationSchema),
+      async (c) => {
+        const { contestId } = c.req.valid("param");
+        const { participant } = await access(c, contestId);
+        return c.json(
+          await listSubmissions(
+            c,
+            contestId,
+            participant,
+            c.req.valid("query"),
           ),
         );
-      if (!submission) throw new NotFoundException("Submission not found");
-      const [metrics] = await db
-        .select({
-          judged: sql<number>`count(*) filter (where ${submissionTestCaseResultsTable.verdict} is not null)::int`,
-          passed: sql<number>`count(*) filter (where ${submissionTestCaseResultsTable.verdict} = 'AC')::int`,
-          executionTime: sql<
-            number | null
-          >`max(${submissionTestCaseResultsTable.executionTime})`,
-          memoryUsed: sql<
-            number | null
-          >`max(${submissionTestCaseResultsTable.memoryUsed})`,
-        })
-        .from(submissionTestCaseResultsTable)
-        .where(eq(submissionTestCaseResultsTable.submissionId, submissionId));
-      const total = await db.$count(
-        testCasesTable,
-        eq(testCasesTable.problemId, submission.problemId),
-      );
-      const [compiler] = await db
-        .select({ output: submissionTestCaseResultsTable.compileOutput })
-        .from(submissionTestCaseResultsTable)
-        .where(
-          and(
-            eq(submissionTestCaseResultsTable.submissionId, submissionId),
-            eq(submissionTestCaseResultsTable.verdict, "CE"),
-          ),
-        )
-        .limit(1);
-      return c.json({
-        ...submission,
-        ...metrics!,
-        total,
-        compileOutput: compiler?.output ?? null,
-      });
-    },
-  );
-export default app;
+      },
+    )
+    .get(
+      "/:submissionId",
+      zValidator(
+        "param",
+        z.object({ contestId: z.uuid(), submissionId: z.uuid() }),
+      ),
+      async (c) => {
+        const { contestId, submissionId } = c.req.valid("param");
+        const { participant } = await access(c, contestId);
+        const [submission] = await db
+          .select({ ...summary, sourceCode: submissionsTable.sourceCode })
+          .from(submissionsTable)
+          .innerJoin(
+            problemsTable,
+            eq(problemsTable.id, submissionsTable.problemId),
+          )
+          .where(
+            and(
+              eq(problemsTable.contestId, contestId),
+              eq(submissionsTable.id, submissionId),
+              ...visibility(c, participant),
+            ),
+          );
+        if (!submission) throw new NotFoundException("Submission not found");
+        const [metrics] = await db
+          .select({
+            judged: sql<number>`count(*) filter (where ${submissionTestCaseResultsTable.verdict} is not null)::int`,
+            passed: sql<number>`count(*) filter (where ${submissionTestCaseResultsTable.verdict} = 'AC')::int`,
+            executionTime: sql<
+              number | null
+            >`max(${submissionTestCaseResultsTable.executionTime})`,
+            memoryUsed: sql<
+              number | null
+            >`max(${submissionTestCaseResultsTable.memoryUsed})`,
+          })
+          .from(submissionTestCaseResultsTable)
+          .where(eq(submissionTestCaseResultsTable.submissionId, submissionId));
+        const total = await db.$count(
+          testCasesTable,
+          eq(testCasesTable.problemId, submission.problemId),
+        );
+        const [compiler] = await db
+          .select({ output: submissionTestCaseResultsTable.compileOutput })
+          .from(submissionTestCaseResultsTable)
+          .where(
+            and(
+              eq(submissionTestCaseResultsTable.submissionId, submissionId),
+              eq(submissionTestCaseResultsTable.verdict, "CE"),
+            ),
+          )
+          .limit(1);
+        return c.json({
+          ...submission,
+          ...metrics!,
+          total,
+          compileOutput: compiler?.output ?? null,
+        });
+      },
+    );
+}
+
+export default createSubmissionsRoute(requireOfficialContestAccess);

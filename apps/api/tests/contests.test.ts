@@ -29,6 +29,9 @@ test(
     const { default: contests } = await import(
       "../src/routes/contests/index.js"
     );
+    const { default: practice } = await import(
+      "../src/routes/practice/index.js"
+    );
     const { closeSubmissionQueue } = await import(
       "../src/lib/submission-queue.js"
     );
@@ -42,7 +45,8 @@ test(
     );
     const app = new Hono()
       .use("*", authMiddleware)
-      .route("/contests", contests);
+      .route("/contests", contests)
+      .route("/practice", practice);
     app.onError((error, c) =>
       error instanceof HTTPException
         ? c.json({ message: error.message }, error.status)
@@ -741,6 +745,217 @@ test(
         ).json();
         assert.equal(standings.standings.length, 1);
         assert.equal(standings.standings[0].solved, 1);
+      },
+    );
+    await t.test(
+      "practice problem sets are open to unregistered students and judge normally",
+      async () => {
+        const practiceRequest = (
+          route: string,
+          user = "alice",
+          method = "GET",
+          body?: unknown,
+        ) =>
+          app.request(`/practice${route}`, {
+            method,
+            headers: {
+              cookie: cookies[user]!,
+              "Content-Type": "application/json",
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          });
+        const slug = `practice-${randomUUID()}`;
+        assert.equal(
+          (
+            await practiceRequest("", "admin", "POST", {
+              title: "Practice set",
+              slug,
+              description: "Solve at your own pace",
+              allowedLanguages: [54],
+              isActive: true,
+            })
+          ).status,
+          400,
+        );
+        const created = await practiceRequest("", "admin", "POST", {
+          title: "Practice set",
+          slug,
+          description: "Solve at your own pace",
+          allowedLanguages: [54],
+        });
+        assert.equal(created.status, 201);
+        const practiceId = (await created.json()).id as string;
+        assert.equal(
+          (await practiceRequest(`/${practiceId}`, "admin")).status,
+          200,
+        );
+        assert.equal(
+          (await request(`/${practiceId}`, "admin")).status,
+          404,
+        ); // Official routes never expose problem sets.
+
+        const problem = await practiceRequest(
+          `/${practiceId}/problems`,
+          "admin",
+          "POST",
+          {
+            title: "A + B",
+            statement: "Add two integers",
+            cpuLimit: 2,
+            memoryLimit: 131072,
+          },
+        );
+        assert.equal(problem.status, 201);
+        const problemId = (await problem.json()).id as string;
+        const testCase = await practiceRequest(
+          `/${practiceId}/problems/${problemId}/testcases`,
+          "admin",
+          "POST",
+          { position: 1, stdin: "1 2", stdout: "3", isSample: true },
+        );
+        assert.equal(testCase.status, 201);
+        assert.equal(
+          (
+            await practiceRequest(`/${practiceId}`, "admin", "PUT", {
+              isActive: true,
+            })
+          ).status,
+          200,
+        );
+
+        const list = await (await practiceRequest("", "outsider")).json();
+        const listed = list.problemSets.find(
+          (entry: { id: string }) => entry.id === practiceId,
+        );
+        assert.equal(listed.problemCount, 1);
+        assert.equal(listed.solvedCount, 0);
+        const bySlug = await (
+          await practiceRequest(`/by-slug/${slug}`, "outsider")
+        ).json();
+        assert.equal(bySlug.id, practiceId);
+        assert.equal(bySlug.problemCount, 1);
+        assert.equal(bySlug.solvedCount, 0);
+        assert.equal(
+          (await practiceRequest(`/${practiceId}/problems`, "outsider")).status,
+          200,
+        );
+
+        const submitted = await practiceRequest(
+          `/${practiceId}/problems/${problemId}/submission`,
+          "outsider",
+          "POST",
+          { sourceCode: "code", languageCode: 54 },
+        );
+        assert.equal(submitted.status, 201);
+        const submissionId = (await submitted.json()).id as string;
+        assert.ok(await queue.getJob(submissionId));
+        await processSubmission(submissionId, store, {
+          async create() {
+            return randomUUID();
+          },
+          async result() {
+            return {
+              verdict: "AC",
+              executionTime: 0.1,
+              memoryUsed: 100,
+              compileOutput: null,
+            };
+          },
+        });
+        const progress = await (
+          await practiceRequest(`/${practiceId}/problems`, "outsider")
+        ).json();
+        assert.equal(progress.problems[0].solved, true);
+        assert.equal(progress.problems[0].attempts, 1);
+        const refreshed = await (await practiceRequest("", "outsider")).json();
+        assert.equal(
+          refreshed.problemSets.find(
+            (entry: { id: string }) => entry.id === practiceId,
+          ).solvedCount,
+          1,
+        );
+
+        // Published problem sets stay editable; incomplete additions stay out of
+        // the student view until they have a test case.
+        const second = await practiceRequest(
+          `/${practiceId}/problems`,
+          "teacher",
+          "POST",
+          {
+            title: "Second problem",
+            statement: "Second statement",
+            cpuLimit: 1,
+            memoryLimit: 1024,
+          },
+        );
+        assert.equal(second.status, 201);
+        const secondId = (await second.json()).id as string;
+        const beforeCase = await (
+          await practiceRequest(`/${practiceId}/problems`, "outsider")
+        ).json();
+        assert.equal(beforeCase.problems.length, 1);
+        assert.equal(
+          (
+            await practiceRequest(
+              `/${practiceId}/problems/${secondId}/testcases`,
+              "teacher",
+              "POST",
+              { position: 1, stdin: "", stdout: "", isSample: false },
+            )
+          ).status,
+          201,
+        );
+        const afterCase = await (
+          await practiceRequest(`/${practiceId}/problems`, "outsider")
+        ).json();
+        assert.equal(afterCase.problems.length, 2);
+
+        // Ended official contests are practice-only for unregistered students.
+        const all = await (await practiceRequest("", "outsider")).json();
+        assert.ok(
+          all.pastContests.some(
+            (entry: { id: string }) => entry.id === individual.contest.id,
+          ),
+        );
+        assert.equal(
+          (
+            await practiceRequest(
+              `/${individual.contest.id}/problems`,
+              "outsider",
+            )
+          ).status,
+          200,
+        );
+        const late = await practiceRequest(
+          `/${individual.contest.id}/problems/${individual.problemId}/submission`,
+          "outsider",
+          "POST",
+          { sourceCode: "late", languageCode: 54 },
+        );
+        assert.equal(late.status, 201);
+        const lateId = (await late.json()).id as string;
+        await processSubmission(lateId, store, {
+          async create() {
+            return randomUUID();
+          },
+          async result() {
+            return {
+              verdict: "AC",
+              executionTime: 0.1,
+              memoryUsed: 100,
+              compileOutput: null,
+            };
+          },
+        });
+        const standings = await (
+          await request(`/${individual.contest.id}/standings`, "alice")
+        ).json();
+        assert.equal(
+          standings.standings.find(
+            (entry: { id: string }) => entry.id === ids.alice,
+          ).solved,
+          0,
+        );
       },
     );
     await t.test(
