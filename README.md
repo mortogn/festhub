@@ -46,6 +46,7 @@ To make it easier for university and organizers to manage and create new events 
 - CP: https://contests.festhub.morto.dev
 - API: https://api.festhub.morto.dev
 - Judge0: https://judge0.festhub.morto.dev
+- Admin: https://admin.festhub.morto.dev
 
 ### Credential for Admin
 
