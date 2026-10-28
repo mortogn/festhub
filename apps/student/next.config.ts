@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { uploadImages } from "../../packages/frontend/src/image-config";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -9,6 +10,7 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  images: uploadImages(),
   transpilePackages: ["@festhub/shared", "@festhub/frontend"],
   turbopack: {
     rules: {

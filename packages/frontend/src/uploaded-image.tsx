@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState, type ReactNode } from "react";
 import { imageUrl, refreshImageSession } from "./uploads";
 
@@ -52,13 +53,15 @@ function ImageContent({
       </span>
     );
   return (
-    // Browser requests preserve API cookies; Next's image optimizer does not.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={`${imageUrl(imageId)}${attempt ? `?retry=${attempt}` : ""}`}
       alt={alt}
-      className="absolute inset-0 size-full object-cover"
-      loading="lazy"
+      fill
+      sizes="(max-width: 768px) 100vw, 50vw"
+      className="object-cover"
+      // Avatars need the API session cookie, which Next's server-side image
+      // optimizer cannot forward, so the browser loads them directly.
+      unoptimized={avatar}
       onError={async () => {
         if (avatar && !retried.current) {
           retried.current = true;
