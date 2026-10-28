@@ -1,34 +1,21 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@festhub/frontend/auth";
 import { errorMessage } from "@festhub/frontend/api";
 import { signInSchema } from "@festhub/shared/validation";
 import { Button } from "@festhub/ui/components/button";
-import { Input } from "@festhub/ui/components/input";
 import { Label } from "@festhub/ui/components/label";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@festhub/ui/components/card";
-import {
-  CodeIcon,
-  KeyIcon,
-  ListChecksIcon,
-  MailIcon,
-  TrophyIcon,
-} from "@festhub/ui/icons";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@festhub/ui/components/input-group";
+import { KeyIcon, MailIcon } from "@festhub/ui/icons";
 import { client, readResponse } from "@/lib/api";
 import { ErrorState } from "./shell";
-
-const perks = [
-  { icon: CodeIcon, text: "Solve problems in your favourite language" },
-  { icon: ListChecksIcon, text: "Get instant verdicts from the judge" },
-  { icon: TrophyIcon, text: "Climb the live standings" },
-];
 
 export function SignIn() {
   const auth = useAuthContext();
@@ -62,90 +49,94 @@ export function SignIn() {
     }
   }
   return (
-    <div className="mx-auto grid w-full max-w-5xl items-stretch overflow-hidden rounded-3xl border bg-card shadow-soft md:my-6 md:grid-cols-[1.05fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-primary p-10 text-primary-foreground md:flex md:flex-col md:justify-between">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-20 -right-20 size-80 rounded-full bg-brand/60 blur-3xl"
+    <div className="grid min-h-dvh lg:grid-cols-2">
+      <aside className="sticky top-0 hidden h-dvh overflow-hidden lg:block">
+        <Image
+          src="/pub_campus.png"
+          alt="University campus"
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover saturate-75"
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 -left-10 size-72 rounded-full bg-cyan-400/20 blur-3xl"
-        />
-        <div className="relative space-y-4">
-          <p className="font-mono text-xs tracking-widest text-white/70 uppercase">
-            PUB FestHub · Contests
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/15 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-10 text-white xl:p-14">
+          <p className="max-w-md text-4xl leading-tight font-semibold tracking-tight">
+            Code. Compete.
+            <br />
+            Climb the standings.
           </p>
-          <h2 className="text-4xl leading-tight font-semibold tracking-tight text-balance">
-            Code. Compete. Climb.
-          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
+            Solve problems in your favourite language and get instant verdicts
+            from the judge.
+          </p>
         </div>
-        <ul className="relative space-y-4">
-          {perks.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-3 text-white/85">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
-                <Icon className="size-4" />
-              </span>
-              {text}
-            </li>
-          ))}
-        </ul>
       </aside>
-      <Card className="rounded-none bg-transparent py-10 shadow-none ring-0 md:px-4">
-        <CardHeader>
-          <p className="mb-3 font-mono text-xs tracking-widest text-brand uppercase">
-            Ready when you are
-          </p>
-          <CardTitle className="text-2xl font-semibold tracking-tight">
-            Sign in to compete
-          </CardTitle>
-          <CardDescription>Use your existing FestHub account.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-5" aria-busy={pending}>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <div className="relative">
-                <MailIcon
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  required
-                  disabled={pending}
-                  className="h-10 pl-9"
-                />
+      <main className="flex min-h-dvh min-w-0 flex-col items-center justify-center bg-background px-6 py-12 sm:px-10 lg:px-12">
+        <Link
+          href="/"
+          aria-label="FestHub contests home"
+          className="mb-10 inline-flex rounded-lg bg-white p-2 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+        >
+          <Image src="/logo.svg" alt="PUB FestHub" width={150} height={58} />
+        </Link>
+        <div className="w-full max-w-sm">
+          <div className="mb-8 space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Sign in with your FestHub account to join contests.
+            </p>
+          </div>
+          <form onSubmit={submit} className="space-y-6" aria-busy={pending}>
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email address</Label>
+                <InputGroup className="h-11">
+                  <InputGroupAddon align="inline-start" className="pl-3">
+                    <MailIcon aria-hidden />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required
+                    disabled={pending}
+                    placeholder="you@example.com"
+                    className="h-full"
+                  />
+                </InputGroup>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <KeyIcon
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  disabled={pending}
-                  className="h-10 pl-9"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <InputGroup className="h-11">
+                  <InputGroupAddon align="inline-start" className="pl-3">
+                    <KeyIcon aria-hidden />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    disabled={pending}
+                    placeholder="Enter your password"
+                    className="h-full"
+                  />
+                </InputGroup>
               </div>
             </div>
             {error && <ErrorState message={error} />}
-            <Button className="h-10 w-full" disabled={pending}>
+            <Button className="h-11 w-full" disabled={pending}>
               {pending ? "Signing in…" : "Sign in"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }

@@ -86,14 +86,14 @@ export function PracticeList() {
         </div>
         {!data && !error ? (
           <LoadingBlock label="Loading practice…">
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {[0, 1, 2].map((i) => (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-60 rounded-xl" />
               ))}
             </div>
           </LoadingBlock>
         ) : data?.problemSets.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {data.problemSets.map((contest) => (
               <PracticeCard key={contest.id} contest={contest} />
             ))}
@@ -126,13 +126,13 @@ export function PracticeList() {
           </p>
         </div>
         {!data && !error ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[0, 1].map((i) => (
               <Skeleton key={i} className="h-52 rounded-xl" />
             ))}
           </div>
         ) : data?.pastContests.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {data.pastContests.map((contest) => (
               <PracticeCard key={contest.id} contest={contest} past />
             ))}

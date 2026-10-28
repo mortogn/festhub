@@ -6,55 +6,19 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
-  --shadow-soft: 0 1px 2px oklch(0.25 0.09 275 / 6%),
-    0 8px 24px -12px oklch(0.25 0.09 275 / 18%);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 5%), 0 8px 24px -12px oklch(0 0 0 / 15%);
 }
 
-/* Contests theme: FestHub navy + indigo, scoped to this app only. */
+/* Use the shared FestHub theme (same as the student app); the brand tokens
+   are aliases so accents follow it. */
 :root {
   --font-inter: var(--font-sans-loaded, ui-sans-serif), system-ui, sans-serif;
   --font-geist-mono:
     var(--font-mono-loaded, ui-monospace), SFMono-Regular, Menlo, Monaco,
     Consolas, monospace;
-  --background: oklch(0.985 0.005 275);
-  --foreground: oklch(0.21 0.05 275);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.05 275);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.05 275);
-  --primary: oklch(0.26 0.09 275);
-  --primary-foreground: oklch(0.985 0.005 275);
-  --secondary: oklch(0.955 0.02 275);
-  --secondary-foreground: oklch(0.26 0.09 275);
-  --muted: oklch(0.962 0.012 275);
-  --muted-foreground: oklch(0.49 0.04 275);
-  --accent: oklch(0.945 0.03 275);
-  --accent-foreground: oklch(0.26 0.09 275);
-  --border: oklch(0.915 0.015 275);
-  --input: oklch(0.89 0.018 275);
-  --ring: oklch(0.58 0.2 275);
-  --brand: oklch(0.55 0.22 275);
-  --brand-foreground: oklch(0.99 0 0);
-  --brand-soft: oklch(0.955 0.03 275);
-  --radius: 0.75rem;
-}
-
-body {
-  background-image:
-    radial-gradient(
-      60rem 28rem at 85% -10%,
-      oklch(0.55 0.22 275 / 9%),
-      transparent 70%
-    ),
-    radial-gradient(
-      40rem 24rem at -5% 0%,
-      oklch(0.72 0.15 200 / 7%),
-      transparent 70%
-    );
-  background-repeat: no-repeat;
-}
-::selection {
-  background: oklch(0.55 0.22 275 / 25%);
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-soft: var(--secondary);
 }
 
 @keyframes rise-in {

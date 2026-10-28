@@ -22,6 +22,9 @@ import { cn } from "@festhub/ui/lib/utils";
 import { LoadingBlock } from "./status";
 import { UserAvatar } from "./user-avatar";
 
+// Same page width and gutters as the student app.
+const pageWidth = "mx-auto w-full max-w-380 px-5 md:px-10 lg:px-14";
+
 const navLink =
   "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
 
@@ -47,22 +50,24 @@ function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          className="h-10 min-w-0 gap-2 px-3"
           aria-label="Open account menu"
-          className="group flex items-center gap-2.5 rounded-full border bg-card py-1 pr-2.5 pl-1 shadow-xs outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-muted"
+          disabled={pending}
         >
-          <UserAvatar name={user.name} imageId={user.displayImageId} />
-          <span className="hidden max-w-40 truncate text-sm font-medium sm:block">
-            {user.name}
-          </span>
-          <ChevronDownIcon
-            aria-hidden
-            className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+          <UserAvatar
+            name={user.name}
+            imageId={user.displayImageId}
+            className="size-6"
           />
-        </button>
+          <span className="max-w-24 truncate text-xs sm:max-w-48">
+            {user.name.split(" ")[0]}
+          </span>
+          <ChevronDownIcon aria-hidden className="size-3.5" />
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem
           disabled={pending}
           onSelect={() => void signOut()}
@@ -84,21 +89,22 @@ export function Shell({ children }: PropsWithChildren) {
     if (auth.status === "unauthenticated" && pathname !== "/sign-in")
       router.replace("/sign-in");
   }, [auth.status, pathname, router]);
+  if (pathname === "/sign-in") return <>{children}</>;
   return (
     <>
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+      <div className="border-b">
+        <div className={pageWidth}>
+        <header className="relative flex w-full items-center justify-between gap-4 py-5">
           <Link
             href="/"
             aria-label="PUB FestHub contests"
-            className="flex items-center gap-3 rounded-md font-semibold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <Image
               src="/logo.svg"
               alt="PUB FestHub"
-              width={123}
-              height={58}
-              className="h-16 w-auto"
+              width={133}
+              height={56}
               priority
             />
           </Link>
@@ -132,12 +138,11 @@ export function Shell({ children }: PropsWithChildren) {
             </nav>
             <UserMenu />
           </div>
+        </header>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-8 sm:px-8 sm:py-12">
-        {pathname === "/sign-in" ? (
-          children
-        ) : auth.status === "authenticated" ? (
+      </div>
+      <main className={cn(pageWidth, "flex-1 py-6 sm:py-10")}>
+        {auth.status === "authenticated" ? (
           <div className="rise-in">{children}</div>
         ) : auth.status === "error" ? (
           <ErrorState

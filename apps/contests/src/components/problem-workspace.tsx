@@ -154,7 +154,7 @@ export function ProblemWorkspace({
           <div className="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
             <nav
               aria-label="Problems"
-              className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-24 lg:flex-col lg:overflow-visible lg:pb-0"
+              className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-6 lg:flex-col lg:overflow-visible lg:pb-0"
             >
               {data.problems.map((entry) => {
                 const active = entry.id === problem.id;
