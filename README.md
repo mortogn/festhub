@@ -10,7 +10,7 @@
 | ------------------------- | -------------- | ------------------------- |
 | Amorto Goon               | 03225205101008 | Developer                 |
 | Nasir Hossain Lamim       | 03225205101013 | Tester                    |
-| Afia Zahin Early          | 03225105101035 | Tester                    |
+| Afia Zahin Early          | 03225105101035 | Tester & Logo Designer    |
 | Monisha Farzana           | 03225105101022 | Team Coordinator & Tester |
 | Mst Sidratul Montaha Hiya | 03225205101044 | Tester                    |
 
