@@ -19,7 +19,7 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         collisionPadding={16}
         className={cn(
-          "z-50 min-w-48 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none",
+          "z-50 min-w-48 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-md outline-none",
           className,
         )}
         {...props}
@@ -39,7 +39,7 @@ function DropdownMenuItem({
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-2 text-sm outline-none select-none focus:bg-muted focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+        "relative flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none select-none focus:bg-muted focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
         variant === "destructive" &&
           "text-destructive focus:bg-destructive/10 focus:text-destructive",
         className,

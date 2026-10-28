@@ -16,8 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@festhub/ui/components/dropdown-menu";
 import {
-  ArrowUpRightIcon,
   ChevronDownIcon,
+  CodeIcon,
   LogOutIcon,
   QrCodeIcon,
 } from "@festhub/ui/icons";
@@ -57,86 +57,87 @@ const Header: React.FC = () => {
         <Link href={"/"}>
           <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
         </Link>
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <nav aria-label="Primary" className="flex items-center gap-1">
-            <Link href="/" className={navLink}>
-              Events
-            </Link>
-            {contestsUrl && (
-              <a href={contestsUrl} className={navLink}>
-                Contests
-                <ArrowUpRightIcon className="size-3.5" />
-              </a>
-            )}
-          </nav>
-        {currentUser ? (
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <InvitationNotifications />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-10 min-w-0 gap-2 px-3"
-                  aria-label="Open account menu"
-                  disabled={signingOut}
-                >
-                  <UploadedAvatar
-                    imageId={currentUser.displayImageId}
-                    name={currentUser.name}
-                    className="size-6"
-                  />
-                  <span className="max-w-24 truncate text-xs sm:max-w-48">
-                    {currentUser.name.split(" ")[0]}
-                  </span>
-                  <ChevronDownIcon aria-hidden="true" className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {currentUser.role === "student" && (
-                  <>
-                    <DropdownMenuItem onSelect={() => setQrOpen(true)}>
-                      <QrCodeIcon aria-hidden="true" /> My QR
+        <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+          {currentUser ? (
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <InvitationNotifications />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-10 min-w-0 gap-2 px-3"
+                    aria-label="Open account menu"
+                    disabled={signingOut}
+                  >
+                    <UploadedAvatar
+                      imageId={currentUser.displayImageId}
+                      name={currentUser.name}
+                      className="size-6"
+                    />
+                    <span className="max-w-24 truncate text-xs sm:max-w-48">
+                      {currentUser.name.split(" ")[0]}
+                    </span>
+                    <ChevronDownIcon aria-hidden="true" className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {currentUser.role === "student" && (
+                    <>
+                      <DropdownMenuItem onSelect={() => setQrOpen(true)}>
+                        <QrCodeIcon aria-hidden="true" /> My QR
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {profileNavigation.map((item) => (
+                    <DropdownMenuItem asChild key={item.href}>
+                      <Link href={item.href}>
+                        <item.icon aria-hidden="true" />
+                        {item.title}
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {profileNavigation.map((item) => (
-                  <DropdownMenuItem asChild key={item.href}>
-                    <Link href={item.href}>
-                      <item.icon aria-hidden="true" />{item.title}
-                    </Link>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={signingOut}
+                    onSelect={() => {
+                      void logout();
+                    }}
+                  >
+                    <LogOutIcon aria-hidden="true" />{" "}
+                    {signingOut ? "Logging out…" : "Log out"}
                   </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={signingOut}
-                  onSelect={() => { void logout(); }}
-                >
-                  <LogOutIcon aria-hidden="true" /> {signingOut ? "Logging out…" : "Log out"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <MyQrDialog
-              key={currentUser.id}
-              userId={currentUser.id}
-              open={qrOpen}
-              onOpenChange={setQrOpen}
-            />
-          </div>
-        ) : (
-          <div className="space-x-2">
-            <Button asChild className="px-5" size={"lg"} variant={"secondary"}>
-              <Link href={"/sign-in"}>Sign in</Link>
-            </Button>
-            <Button asChild className="px-5" size={"lg"}>
-              <Link href={"/sign-up"}>Sign up</Link>
-            </Button>
-          </div>
-        )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <MyQrDialog
+                key={currentUser.id}
+                userId={currentUser.id}
+                open={qrOpen}
+                onOpenChange={setQrOpen}
+              />
+            </div>
+          ) : (
+            <div className="space-x-2">
+              <Button
+                asChild
+                className="px-5"
+                size={"lg"}
+                variant={"secondary"}
+              >
+                <Link href={"/sign-in"}>Sign in</Link>
+              </Button>
+              <Button asChild className="px-5" size={"lg"}>
+                <Link href={"/sign-up"}>Sign up</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </header>
       {error && (
-        <p role="alert" className="mb-4 text-right text-sm text-destructive">{error}</p>
+        <p role="alert" className="mb-4 text-right text-sm text-destructive">
+          {error}
+        </p>
       )}
     </MaxWidthWrapper>
   );
