@@ -43,7 +43,7 @@ async function EventContent({ params }: Props) {
   const contestHref = contestUrl(event.contestSlug);
 
   return (
-    <div>
+    <div className="mb-25 lg:mb-10">
       <div className="h-80 w-full relative flex items-center mb-8">
         <Button
           asChild
@@ -110,13 +110,15 @@ async function EventContent({ params }: Props) {
 
         <div className="lg:max-w-100 w-full space-y-5">
           {contestHref && (
-            <div className="flex items-center gap-4 rounded-md border border-border p-5 shadow-sm">
+            <div className="flex items-center gap-4 rounded-md border border-border px-6 py-3 lg:p-5 shadow-sm fixed bottom-6 left-1/2 -translate-x-1/2 bg-background max-w-100 w-full lg:static lg:translate-x-0">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
                 <TrophyIcon aria-hidden="true" className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">Programming contest</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-semibold text-sm lg:text-base">
+                  Programming contest
+                </p>
+                <p className="text-sm text-muted-foreground md:block hidden">
                   Solve problems and track the standings.
                 </p>
               </div>

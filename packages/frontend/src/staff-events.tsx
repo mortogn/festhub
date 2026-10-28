@@ -30,6 +30,7 @@ import {
   campusDate,
   formatDateTime,
   fromDateInput,
+  getDuration,
   toDateInput,
 } from "./dates";
 import { useResource, type Resource } from "./resource";
@@ -50,7 +51,14 @@ import { VolunteerRoster } from "./staff-volunteers";
 import { ImageUpload } from "./image-upload";
 import { UploadedImage } from "./uploaded-image";
 import { DeleteButton } from "./delete-button";
-import { QrCodeIcon, RefreshCwIcon, UsersIcon } from "@festhub/ui/icons";
+import {
+  CalendarClockIcon,
+  CodeIcon,
+  QrCodeIcon,
+  RefreshCwIcon,
+  RotateCwClock,
+  UsersIcon,
+} from "@festhub/ui/icons";
 import { EventAttendanceQr } from "./event-attendance-qr";
 
 type EventRecord = InferResponseType<
@@ -116,7 +124,7 @@ function RunningBadge({
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none" />
         <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
       </span>
-      running
+      ongoing
     </Badge>
   );
 }
@@ -172,6 +180,8 @@ function EventCards({
   pendingRegistrations: ReturnType<typeof usePendingRegistrations>;
   eventMetadata: Resource<Events>;
 }) {
+  const now = new Date();
+
   return (
     <div className="@container">
       <div className="grid gap-4 @min-[40rem]:grid-cols-2">
@@ -187,18 +197,26 @@ function EventCards({
                   endsAt={event.endsAt}
                   className="absolute top-6 right-6 z-10 sm:top-7 sm:right-7"
                 />
-                <UploadedImage
+                {/*<UploadedImage
                   imageId={event.thumbnailId}
                   alt={`${event.title} thumbnail`}
                   className="mb-4 aspect-video w-full rounded-lg"
-                />
+                />*/}
               </>
             )}
             <div className="flex items-start gap-3">
               <div
                 aria-hidden="true"
-                className="flex w-12 shrink-0 flex-col items-center rounded-lg border bg-muted/30 py-2"
+                className="flex w-12 shrink-0 flex-col relative items-center rounded-lg border bg-muted/30 py-2 overflow-hidden"
               >
+                {new Date(event.startsAt) > now ? (
+                  <div className="bg-green-400 h-1 w-full absolute top-0" />
+                ) : new Date(event.startsAt) < now &&
+                  new Date(event.endsAt) > now ? (
+                  <div className="bg-yellow-400 h-1 w-full absolute top-0" />
+                ) : (
+                  <div className="bg-red-400 h-1 w-full absolute top-0" />
+                )}
                 <span className="text-xs font-medium uppercase text-muted-foreground">
                   {campusDate(event.startsAt).format("MMM")}
                 </span>
@@ -230,13 +248,24 @@ function EventCards({
                 <RunningBadge startsAt={event.startsAt} endsAt={event.endsAt} />
               )}
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              <time dateTime={event.startsAt}>
-                {formatDateTime(event.startsAt)}
-              </time>
-              <br />
-              to {formatDateTime(event.endsAt)}
-            </p>
+            <div className="mt-4 space-y-1 text-sm leading-relaxed text-muted-foreground">
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="flex items-center gap-2">
+                    <RotateCwClock className="size-5" />
+                    {getDuration(event.startsAt, event.endsAt)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Duration of the event is{" "}
+                  {getDuration(event.startsAt, event.endsAt)}
+                </TooltipContent>
+              </Tooltip>
+              <div className="flex items-center gap-2">
+                <CalendarClockIcon className="size-5" />
+                {formatDateTime(event.endsAt)}
+              </div>
+            </div>
             {event.venue && (
               <p className="mt-2 text-sm break-words text-muted-foreground">
                 {event.venue.title}
@@ -248,7 +277,7 @@ function EventCards({
                   status={event.isActive ? "published" : "unpublished"}
                 />
               )}
-              <div className="ml-auto flex flex-wrap gap-2">
+              <div className="ml-auto flex flex-wrap gap-1">
                 <EventAttendanceQr eventId={event.id} title={event.title} />
                 <Button asChild variant="outline" size="sm">
                   <Link href={`${eventHref(event.id)}/attendance`}>
@@ -672,9 +701,15 @@ export function StaffEventPage({ id }: { id: string }) {
               action={
                 <div className="flex flex-wrap items-center gap-2">
                   {event.data.type === "contest" && (
-                    <Button asChild variant="outline">
+                    <Button
+                      asChild
+                      size={"icon"}
+                      variant="outline"
+                      className="rounded-full"
+                    >
                       <Link href={`/dashboard/contests/create?eventId=${id}`}>
-                        Programming contest
+                        <CodeIcon />
+                        <span className="sr-only">Programming contest</span>
                       </Link>
                     </Button>
                   )}

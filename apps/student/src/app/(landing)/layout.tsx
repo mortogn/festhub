@@ -9,7 +9,7 @@ export default function LandingLayout({
   return (
     <>
       <Header />
-      {children}
+      <div className="mb-10">{children}</div>
     </>
   );
 }
