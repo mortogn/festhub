@@ -433,6 +433,7 @@ const app = new Hono<{ Variables: Variables }>()
               name: usersTable.name,
               email: usersTable.email,
               studentId: studentsTable.studentId,
+              displayImageId: usersTable.displayImageId,
             },
             invitedBy: {
               id: invitedByUser.id,
@@ -502,6 +503,7 @@ const app = new Hono<{ Variables: Variables }>()
               name: usersTable.name,
               email: usersTable.email,
               studentId: studentsTable.studentId,
+              displayImageId: usersTable.displayImageId,
             },
             invitedBy: {
               id: invitedByUser.id,

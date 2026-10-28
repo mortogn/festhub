@@ -167,12 +167,6 @@ function VolunteerCard({
     Date.parse(event.volunteerEndsAt) > now;
   const canReview = !!row.registeredAt && !confirmed(row) && !!event && !ended;
   const isConfirmed = confirmed(row);
-  const initials = row.student.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("");
   const status = isConfirmed
     ? "Confirmed"
     : row.registrationStatus === "pending"
@@ -180,13 +174,7 @@ function VolunteerCard({
       : row.inviteStatus === "pending"
         ? "Awaiting reply"
         : "Not selected";
-  const duty = row.checkedOutAt
-    ? "Duty completed"
-    : row.checkedInAt
-      ? "Checked in"
-      : isConfirmed
-        ? "Ready for duty"
-        : "Not assigned";
+
   const review = async (action: "approved" | "rejected") =>
     readResponse(
       await client.volunteers.request.$patch({
@@ -199,12 +187,10 @@ function VolunteerCard({
       <div className="flex-1 space-y-4 p-4 sm:p-5">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div className="flex w-full min-w-0 items-center gap-3 sm:flex-1">
-            <span
-              aria-hidden="true"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold uppercase text-secondary-foreground"
-            >
-              {initials}
-            </span>
+            <UploadedAvatar
+              imageId={row.student.displayImageId}
+              name={row.student.name}
+            />
             <div className="min-w-0">
               <Link
                 className="font-semibold break-words hover:underline"
@@ -230,9 +216,7 @@ function VolunteerCard({
             {status}
           </Badge>
         </div>
-        <p className="text-sm break-all text-muted-foreground">
-          {row.student.email}
-        </p>
+
         {showEvent && (
           <div className="flex items-start gap-2 rounded-lg bg-muted/40 p-3">
             <CalendarClockIcon
@@ -256,34 +240,24 @@ function VolunteerCard({
           </div>
         )}
         <dl className="grid grid-cols-2 gap-3 text-xs">
-          <div className="space-y-1.5">
-            <dt className="text-muted-foreground">Application</dt>
-            <dd>
-              {row.registrationStatus ? (
+          {row.registrationStatus && (
+            <div className="space-y-1.5">
+              <dt className="text-muted-foreground">Application</dt>
+              <dd>
                 <StatusBadge status={row.registrationStatus} />
-              ) : (
-                "No application"
-              )}
-            </dd>
-          </div>
-          <div className="space-y-1.5">
-            <dt className="text-muted-foreground">Invitation</dt>
-            <dd>
-              {row.inviteStatus ? (
+              </dd>
+            </div>
+          )}
+
+          {row.invitationSentAt && (
+            <div className="space-y-1.5">
+              <dt className="text-muted-foreground">Invitation</dt>
+              <dd>
                 <StatusBadge status={row.inviteStatus} />
-              ) : (
-                "No invitation"
-              )}
-            </dd>
-          </div>
+              </dd>
+            </div>
+          )}
         </dl>
-        <div className="flex items-center gap-2 text-sm">
-          <HandHeartIcon
-            aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground"
-          />
-          <span>{duty}</span>
-        </div>
         <details className="rounded-lg border text-sm">
           <summary className="cursor-pointer rounded-lg px-3 py-2.5 text-muted-foreground outline-offset-2 focus-visible:outline-2">
             View activity &amp; duty history
