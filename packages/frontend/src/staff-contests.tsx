@@ -99,7 +99,7 @@ export function StaffContestsPage() {
         value={view}
         onValueChange={(value) => setView(value as typeof view)}
       >
-        <TabsList className="w-full sm:w-auto">
+        <TabsList>
           <TabsTrigger value="official">Official contests</TabsTrigger>
           <TabsTrigger value="practice">Practice problem sets</TabsTrigger>
         </TabsList>
@@ -152,8 +152,8 @@ export function StaffContestsPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     {contest.problemCount ?? 0} problem
-                    {(contest.problemCount ?? 0) === 1 ? "" : "s"} · Open to
-                    all signed-in students
+                    {(contest.problemCount ?? 0) === 1 ? "" : "s"} · Open to all
+                    signed-in students
                   </p>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -233,9 +233,7 @@ export function StaffCreateContestPage() {
           description="Start with a draft. Add problems and test cases before publishing it to all signed-in students."
         />
         <Section title="Problem set details">
-          <ProblemSetSettings
-            onSaved={(id) => router.push(contestHref(id))}
-          />
+          <ProblemSetSettings onSaved={(id) => router.push(contestHref(id))} />
         </Section>
       </div>
     );
@@ -321,7 +319,7 @@ export function StaffContestPage({ id }: { id: string }) {
               }
             />
             <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-              <TabsList className="w-full sm:w-auto">
+              <TabsList className="">
                 <TabsTrigger value="problems">Problems</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
                 <TabsTrigger value="publish">Publication</TabsTrigger>
@@ -891,7 +889,8 @@ function ContestPublication({
   data: ContestEditor;
   onChange: () => void;
 }) {
-  if (!data.event) return <ProblemSetPublication data={data} onChange={onChange} />;
+  if (!data.event)
+    return <ProblemSetPublication data={data} onChange={onChange} />;
   const { contest, event, problems } = data;
   const ready =
     problems.length > 0 &&
@@ -1069,9 +1068,7 @@ function ProblemSetPublication({
                 : "Problem set published."
             }
           >
-            {contest.isActive
-              ? "Unpublish problem set"
-              : "Publish problem set"}
+            {contest.isActive ? "Unpublish problem set" : "Publish problem set"}
           </MutationButton>
           <p className="text-xs break-all text-muted-foreground">
             Student path: /practice/{contest.slug}
