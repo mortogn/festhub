@@ -7,6 +7,7 @@ import {
 import { Variables } from "../../server.js";
 import { db } from "@festhub/db";
 import {
+  contestsTable,
   eventsTable,
   participantsTable,
   studentsTable,
@@ -20,6 +21,7 @@ import { enforceAuthMiddleware } from "../../middlewares/enforce-auth-middleware
 import {
   and,
   desc,
+  getTableColumns,
   eq,
   lt,
   gt,
@@ -265,6 +267,7 @@ const app = new Hono<{ Variables: Variables }>()
         registrationClosesAt: eventsTable.registrationClosesAt,
         description: sql<string>`LEFT(${eventsTable.description}, 200)`,
         thumbnailId: eventsTable.thumbnailId,
+        contestSlug: contestsTable.slug,
         venue: {
           id: venuesTable.id,
           title: venuesTable.title,
@@ -273,6 +276,13 @@ const app = new Hono<{ Variables: Variables }>()
       })
       .from(eventsTable)
       .leftJoin(venuesTable, eq(venuesTable.id, eventsTable.venueId))
+      .leftJoin(
+        contestsTable,
+        and(
+          eq(contestsTable.eventId, eventsTable.id),
+          eq(contestsTable.isActive, true),
+        ),
+      )
       .orderBy(desc(eventsTable.startsAt))
       .$dynamic();
 
@@ -295,7 +305,21 @@ const app = new Hono<{ Variables: Variables }>()
     const { id } = c.req.valid("param");
 
     try {
-      let eventQuery = db.select().from(eventsTable).$dynamic();
+      // Only the slug of a live contest is exposed so clients can link to it.
+      let eventQuery = db
+        .select({
+          ...getTableColumns(eventsTable),
+          contestSlug: contestsTable.slug,
+        })
+        .from(eventsTable)
+        .leftJoin(
+          contestsTable,
+          and(
+            eq(contestsTable.eventId, eventsTable.id),
+            eq(contestsTable.isActive, true),
+          ),
+        )
+        .$dynamic();
 
       let conditions = [eq(eventsTable.id, id)];
 

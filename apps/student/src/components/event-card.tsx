@@ -12,6 +12,7 @@ import {
 import {
   ArrowRightIcon,
   CalendarClockIcon,
+  CodeIcon,
   HandHeartIcon,
   MapPinIcon,
   UsersIcon,
@@ -21,6 +22,7 @@ import Link from "next/link";
 import React, { ReactNode } from "react";
 import { UploadedImage } from "@festhub/frontend/uploaded-image";
 import { cn } from "@festhub/ui/lib/utils";
+import { contestUrl } from "@/lib/contests";
 
 type EventsResponse = InferResponseType<(typeof client)["events"]["$get"], 200>;
 
@@ -32,25 +34,34 @@ const SlideCard: React.FC<{
   text: string;
   icon: ReactNode;
   className?: string;
-}> = ({ text, icon, className }) => {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "absolute mt-3 cursor-default top-0 right-0 py-1 px-3 z-20 bg-secondary text-secondary-foreground shadow-md border-r border-t border-b border-border flex items-center rounded-l-full group motion-reduce:transition-none",
-        className,
-      )}
-    >
+  href?: string;
+}> = ({ text, icon, className, href }) => {
+  const classes = cn(
+    "absolute mt-3 top-0 right-0 py-1 px-3 z-20 bg-secondary text-secondary-foreground shadow-md border-r border-t border-b border-border flex items-center rounded-l-full group motion-reduce:transition-none",
+    href ? "cursor-pointer" : "cursor-default",
+    className,
+  );
+  const label = (
+    <span className="text-xs font-medium font-mono tracking-tight ml-0 opacity-0 text-nowrap overflow-hidden max-w-0 group-hover:max-w-100 group-focus-visible:max-w-100 group-hover:ml-1.5 group-focus-visible:ml-1.5 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-300 ease-in-out">
+      {text}
+    </span>
+  );
+  return href ? (
+    <a href={href} aria-label={text} className={classes}>
       {icon}
-      <span className="text-xs font-medium font-mono tracking-tight ml-0 opacity-0 text-nowrap overflow-hidden max-w-0 group-hover:max-w-100 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-300 ease-in-out">
-        {text}
-      </span>
+      {label}
+    </a>
+  ) : (
+    <button type="button" className={classes}>
+      {icon}
+      {label}
     </button>
   );
 };
 
 const EventCard: React.FC<EventCardProps> = ({ data }) => {
   const now = new Date();
+  const contestHref = contestUrl(data.contestSlug);
 
   const lookingForVolunteer: boolean =
     data.volunteerRegistration === "open" &&
@@ -83,6 +94,19 @@ const EventCard: React.FC<EventCardProps> = ({ data }) => {
             className={lookingForVolunteer ? "mt-12" : "mt-3"}
             icon={<UsersIcon strokeWidth={1} className="size-5" />}
             text="Registration open"
+          />
+        )}
+
+        {contestHref && (
+          <SlideCard
+            href={contestHref}
+            className={
+              ["mt-3", "mt-12", "mt-21"][
+                Number(lookingForVolunteer) + Number(registrationOpen)
+              ]
+            }
+            icon={<CodeIcon strokeWidth={1} className="size-5" />}
+            text="Programming contest"
           />
         )}
       </div>

@@ -15,10 +15,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@festhub/ui/components/dropdown-menu";
-import { ChevronDownIcon, LogOutIcon, QrCodeIcon } from "@festhub/ui/icons";
+import {
+  ArrowUpRightIcon,
+  ChevronDownIcon,
+  LogOutIcon,
+  QrCodeIcon,
+} from "@festhub/ui/icons";
 import { useRouter } from "next/navigation";
 import { profileNavigation } from "./profile-navigation";
 import MyQrDialog from "./my-qr-dialog";
+import { contestsHomeUrl } from "@/lib/contests";
+
+const navLink =
+  "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
 
 const Header: React.FC = () => {
   const { user: currentUser, signOut } = useAuthContext();
@@ -26,6 +35,7 @@ const Header: React.FC = () => {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const contestsUrl = contestsHomeUrl();
 
   async function logout() {
     setSigningOut(true);
@@ -47,6 +57,18 @@ const Header: React.FC = () => {
         <Link href={"/"}>
           <Image alt="festhub" src={"/logo.svg"} height={56} width={133} />
         </Link>
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <nav aria-label="Primary" className="flex items-center gap-1">
+            <Link href="/" className={navLink}>
+              Events
+            </Link>
+            {contestsUrl && (
+              <a href={contestsUrl} className={navLink}>
+                Contests
+                <ArrowUpRightIcon className="size-3.5" />
+              </a>
+            )}
+          </nav>
         {currentUser ? (
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <InvitationNotifications />
@@ -111,6 +133,7 @@ const Header: React.FC = () => {
             </Button>
           </div>
         )}
+        </div>
       </header>
       {error && (
         <p role="alert" className="mb-4 text-right text-sm text-destructive">{error}</p>

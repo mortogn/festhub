@@ -2,7 +2,13 @@ import MaxWidthWrapper from "@/components/max-width-wrapper";
 import client from "@/lib/api";
 import { formatDateTime } from "@/utils/format-date-time";
 import { Button } from "@festhub/ui/components/button";
-import { ArrowLeft, CalendarClockIcon, MapPinIcon } from "@festhub/ui/icons";
+import {
+  ArrowLeft,
+  ArrowUpRightIcon,
+  CalendarClockIcon,
+  MapPinIcon,
+  TrophyIcon,
+} from "@festhub/ui/icons";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +21,7 @@ import {
   VolunteerCardVisibility,
 } from "./_components/event-activity";
 import { renderMarkdown } from "@/lib/md";
+import { contestUrl } from "@/lib/contests";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -32,6 +39,8 @@ async function EventContent({ params }: Props) {
   const summaries = summaryResponse.ok ? await summaryResponse.json() : [];
   const venueTitle = summaries.find((item) => item.id === event.id)?.venue
     ?.title;
+
+  const contestHref = contestUrl(event.contestSlug);
 
   return (
     <div>
@@ -100,6 +109,25 @@ async function EventContent({ params }: Props) {
         </div>
 
         <div className="lg:max-w-100 w-full space-y-5">
+          {contestHref && (
+            <div className="flex items-center gap-4 rounded-md border border-border p-5 shadow-sm">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                <TrophyIcon aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">Programming contest</p>
+                <p className="text-sm text-muted-foreground">
+                  Solve problems and track the standings.
+                </p>
+              </div>
+              <Button asChild>
+                <a href={contestHref}>
+                  Open
+                  <ArrowUpRightIcon aria-hidden="true" />
+                </a>
+              </Button>
+            </div>
+          )}
           <EventActivityProvider>
             <ParticipantCard event={event} />
             <VolunteerCardVisibility
