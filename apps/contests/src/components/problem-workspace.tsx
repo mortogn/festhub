@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import MarkdownIt from "markdown-it";
 import { useAuthContext } from "@festhub/frontend/auth";
 import { errorMessage } from "@festhub/frontend/api";
@@ -113,12 +114,33 @@ export function ProblemWorkspace({
   const loader = useCallback(() => loadProblems(), [loadProblems]);
   const { data, error, refresh } = usePoll(loader);
   const { track } = useSubmissionTracker();
-  const [selected, setSelected] = useState("");
-  const [tab, setTab] = useState("problems");
-  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [revision, setRevision] = useState(0);
+  const tabParam = searchParams.get("tab");
+  const tab =
+    tabParam === "submissions" || (tabParam === "standings" && showStandings)
+      ? tabParam
+      : "problems";
+  const problemParam = searchParams.get("problem")?.toUpperCase();
+  const submissionId = searchParams.get("submission");
   const problem =
-    data?.problems.find((entry) => entry.id === selected) ?? data?.problems[0];
+    data?.problems.find(
+      (entry) => problemLabel(entry.position) === problemParam,
+    ) ?? data?.problems[0];
+  function navigate(
+    changes: Record<string, string | null>,
+    mode: "push" | "replace" = "push",
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === null) params.delete(key);
+      else params.set(key, value);
+    }
+    const query = params.toString();
+    router[mode](query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
   if (!data)
     return error ? (
       <ErrorState message={error} retry={refresh} />
@@ -136,7 +158,11 @@ export function ProblemWorkspace({
       : []),
   ];
   return (
-    <Tabs value={tab} onValueChange={setTab} className="gap-6">
+    <Tabs
+      value={tab}
+      onValueChange={(value) => navigate({ tab: value, submission: null })}
+      className="gap-6"
+    >
       <TabsList
         variant="line"
         className="h-11! w-full justify-start gap-2 overflow-x-auto border-b p-0"
@@ -170,7 +196,9 @@ export function ProblemWorkspace({
                     key={entry.id}
                     type="button"
                     aria-current={active ? "true" : undefined}
-                    onClick={() => setSelected(entry.id)}
+                    onClick={() =>
+                      navigate({ problem: problemLabel(entry.position) })
+                    }
                     className={cn(
                       "flex shrink-0 items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm font-medium outline-none transition-all focus-visible:ring-3 focus-visible:ring-ring/50",
                       active
@@ -221,14 +249,17 @@ export function ProblemWorkspace({
                         id,
                         contestId,
                         practice,
-                        href: contestHref,
+                        href: `${contestHref}?tab=problems&problem=${problemLabel(problem.position)}`,
                         contestTitle,
                         problemLabel: problemLabel(problem.position),
                         problemTitle: problem.title,
                       });
-                      setSubmissionId(id);
                       setRevision((n) => n + 1);
-                      setTab("submissions");
+                      navigate({
+                        tab: "submissions",
+                        problem: problemLabel(problem.position),
+                        submission: id,
+                      });
                     }}
                   />
                 }
@@ -242,7 +273,7 @@ export function ProblemWorkspace({
           contestId={contestId}
           problems={data.problems}
           selectedId={submissionId}
-          onSelect={setSubmissionId}
+          onSelect={(id) => navigate({ submission: id }, "replace")}
           revision={revision}
           practice={practice}
         />

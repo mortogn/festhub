@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback } from "react";
+import { Suspense, useCallback } from "react";
 import MarkdownIt from "markdown-it";
 import { useAuthContext } from "@festhub/frontend/auth";
 import { Badge } from "@festhub/ui/components/badge";
@@ -134,17 +134,19 @@ export function PracticeWorkspace({ slug }: { slug: string }) {
         />
       )}
       {error && <ErrorState message={error} retry={refresh} />}
-      <ProblemWorkspace
-        contestId={contest.id}
-        contestTitle={contest.title}
-        contestHref={`/practice/${contest.slug}`}
-        allowedLanguages={contest.allowedLanguages}
-        canSubmit={auth.user?.role === "student"}
-        practice
-        loadProblems={problemLoader}
-        loadSamples={sampleLoader}
-        submit={submit}
-      />
+      <Suspense fallback={<Skeleton className="h-72 rounded-xl" />}>
+        <ProblemWorkspace
+          contestId={contest.id}
+          contestTitle={contest.title}
+          contestHref={`/practice/${contest.slug}`}
+          allowedLanguages={contest.allowedLanguages}
+          canSubmit={auth.user?.role === "student"}
+          practice
+          loadProblems={problemLoader}
+          loadSamples={sampleLoader}
+          submit={submit}
+        />
+      </Suspense>
     </div>
   );
 }

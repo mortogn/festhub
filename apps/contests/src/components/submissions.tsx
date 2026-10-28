@@ -31,9 +31,7 @@ import { usePoll } from "@/lib/use-poll";
 import { ErrorState } from "./shell";
 import { LoadingBlock } from "./status";
 
-const listInterval = (data: {
-  submissions: Array<{ status: string }>;
-}) =>
+const listInterval = (data: { submissions: Array<{ status: string }> }) =>
   data.submissions.some(
     (entry) => entry.status === "queued" || entry.status === "processing",
   )
@@ -133,7 +131,9 @@ function SubmissionList({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Your submissions</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Your submissions
+        </CardTitle>
         <CardDescription>
           {practice
             ? "Practice submissions are private to your account."
@@ -326,7 +326,7 @@ function SubmissionPanel({
               <summary className="cursor-pointer px-4 py-3 text-sm font-medium select-none hover:bg-muted/50">
                 Source code
               </summary>
-              <pre className="max-h-96 overflow-auto rounded-b-xl border-t bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100">
+              <pre className="overflow-auto rounded-b-xl border-t bg-secondary text-secondary-foreground px-6 py-4 tracking-wide font-mono text-sm leading-relaxed h-max">
                 {data.sourceCode}
               </pre>
             </details>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useState, type FormEvent } from "react";
 import MarkdownIt from "markdown-it";
 import { useAuthContext } from "@festhub/frontend/auth";
 import { errorMessage } from "@festhub/frontend/api";
@@ -166,22 +166,24 @@ export function ContestWorkspace({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       ) : (
-        <ProblemWorkspace
-          contestId={contest.id}
-          contestTitle={contest.title}
-          contestHref={`/contests/${contest.slug}`}
-          allowedLanguages={contest.allowedLanguages}
-          canSubmit={
-            auth.user?.role === "student" &&
-            now >= starts &&
-            now < ends &&
-            contest.isActive
-          }
-          showStandings
-          loadProblems={problemLoader}
-          loadSamples={sampleLoader}
-          submit={submit}
-        />
+        <Suspense fallback={<Skeleton className="h-72 rounded-xl" />}>
+          <ProblemWorkspace
+            contestId={contest.id}
+            contestTitle={contest.title}
+            contestHref={`/contests/${contest.slug}`}
+            allowedLanguages={contest.allowedLanguages}
+            canSubmit={
+              auth.user?.role === "student" &&
+              now >= starts &&
+              now < ends &&
+              contest.isActive
+            }
+            showStandings
+            loadProblems={problemLoader}
+            loadSamples={sampleLoader}
+            submit={submit}
+          />
+        </Suspense>
       )}
     </div>
   );
