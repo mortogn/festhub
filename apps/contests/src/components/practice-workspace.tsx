@@ -136,6 +136,8 @@ export function PracticeWorkspace({ slug }: { slug: string }) {
       {error && <ErrorState message={error} retry={refresh} />}
       <ProblemWorkspace
         contestId={contest.id}
+        contestTitle={contest.title}
+        contestHref={`/practice/${contest.slug}`}
         allowedLanguages={contest.allowedLanguages}
         canSubmit={auth.user?.role === "student"}
         practice

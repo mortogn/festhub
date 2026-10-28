@@ -168,6 +168,8 @@ export function ContestWorkspace({ slug }: { slug: string }) {
       ) : (
         <ProblemWorkspace
           contestId={contest.id}
+          contestTitle={contest.title}
+          contestHref={`/contests/${contest.slug}`}
           allowedLanguages={contest.allowedLanguages}
           canSubmit={
             auth.user?.role === "student" &&

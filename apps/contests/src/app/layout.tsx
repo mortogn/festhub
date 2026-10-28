@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import AuthProvider from "@festhub/frontend/auth";
 import { NotificationProvider } from "@festhub/frontend/notifications";
 import { Shell } from "@/components/shell";
+import { SubmissionTrackerProvider } from "@/components/submission-tracker";
 import "./globals.css";
 
 const sans = Inter({
@@ -26,7 +27,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <body className="flex min-h-svh flex-col bg-background text-foreground antialiased">
         <NotificationProvider>
           <AuthProvider>
-            <Shell>{children}</Shell>
+            <SubmissionTrackerProvider>
+              <Shell>{children}</Shell>
+            </SubmissionTrackerProvider>
           </AuthProvider>
         </NotificationProvider>
       </body>

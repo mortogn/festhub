@@ -38,9 +38,11 @@ import {
 } from "@festhub/ui/components/select";
 import { loadLanguages, type Problem } from "@/lib/api";
 import { usePoll } from "@/lib/use-poll";
+import { getPreferredLanguage, setPreferredLanguage } from "@/lib/preferences";
 import { ErrorState } from "./shell";
 import { LoadingBlock } from "./status";
 import { Submissions } from "./submissions";
+import { useSubmissionTracker } from "./submission-tracker";
 import { StandingsTable } from "./standings";
 
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
@@ -80,6 +82,8 @@ export type SubmissionHandler = (
 
 export function ProblemWorkspace({
   contestId,
+  contestTitle,
+  contestHref,
   allowedLanguages,
   canSubmit,
   practice = false,
@@ -89,6 +93,8 @@ export function ProblemWorkspace({
   submit,
 }: {
   contestId: string;
+  contestTitle: string;
+  contestHref: string;
   allowedLanguages: number[] | null;
   canSubmit: boolean;
   practice?: boolean;
@@ -99,6 +105,7 @@ export function ProblemWorkspace({
 }) {
   const loader = useCallback(() => loadProblems(), [loadProblems]);
   const { data, error, refresh } = usePoll(loader);
+  const { track } = useSubmissionTracker();
   const [selected, setSelected] = useState("");
   const [tab, setTab] = useState("problems");
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -201,6 +208,15 @@ export function ProblemWorkspace({
                 practice={practice}
                 submit={submit}
                 onSubmitted={(id) => {
+                  track({
+                    id,
+                    contestId,
+                    practice,
+                    href: contestHref,
+                    contestTitle,
+                    problemLabel: problemLabel(problem.position),
+                    problemTitle: problem.title,
+                  });
                   setSubmissionId(id);
                   setRevision((n) => n + 1);
                   setTab("submissions");
@@ -328,7 +344,9 @@ function SubmissionForm({
 }) {
   const { user } = useAuthContext();
   const { data, error, refresh } = usePoll(loadLanguages);
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState(() =>
+    getPreferredLanguage(user?.id),
+  );
   const languages = data?.filter(
     (entry) => !allowedLanguages || allowedLanguages.includes(entry.id),
   );
@@ -356,7 +374,10 @@ function SubmissionForm({
           <Label htmlFor="language">Language</Label>
           <Select
             value={languageCode}
-            onValueChange={setLanguage}
+            onValueChange={(value) => {
+              setLanguage(value);
+              setPreferredLanguage(user?.id, value);
+            }}
             disabled={!languages?.length}
           >
             <SelectTrigger id="language" className="w-full sm:w-80">
@@ -384,7 +405,10 @@ function SubmissionForm({
             languageCode={Number(languageCode)}
             canSubmit={canSubmit}
             submit={submit}
-            onSubmitted={onSubmitted}
+            onSubmitted={(id) => {
+              setPreferredLanguage(user.id, languageCode);
+              onSubmitted(id);
+            }}
           />
         )}
       </CardContent>

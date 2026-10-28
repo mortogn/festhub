@@ -113,33 +113,33 @@ export function useAuthContext() {
   if (!value) throw new Error("AuthProvider is required");
   return value;
 }
-export function SignOutButton() {
+export function useSignOut() {
   const toastFeedback = useToastFeedback();
   const { signOut } = useAuthContext();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const run = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await signOut();
+      router.replace("/sign-in");
+      router.refresh();
+    } catch {
+      if (toastFeedback) toast.error("Unable to sign out. Please try again.");
+      else setError("Unable to sign out. Please try again.");
+    } finally {
+      setPending(false);
+    }
+  };
+  return { pending, error, signOut: run };
+}
+export function SignOutButton() {
+  const { pending, error, signOut } = useSignOut();
   return (
     <div>
-      <Button
-        variant="ghost"
-        disabled={pending}
-        onClick={async () => {
-          setPending(true);
-          setError(null);
-          try {
-            await signOut();
-            router.replace("/sign-in");
-            router.refresh();
-          } catch {
-            if (toastFeedback)
-              toast.error("Unable to sign out. Please try again.");
-            else setError("Unable to sign out. Please try again.");
-          } finally {
-            setPending(false);
-          }
-        }}
-      >
+      <Button variant="ghost" disabled={pending} onClick={signOut}>
         {pending ? "Signing out…" : "Sign out"}
       </Button>
       {error && (

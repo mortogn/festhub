@@ -3,10 +3,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type PropsWithChildren } from "react";
-import { SignOutButton, useAuthContext } from "@festhub/frontend/auth";
+import { useAuthContext, useSignOut } from "@festhub/frontend/auth";
 import { Button } from "@festhub/ui/components/button";
 import { Skeleton } from "@festhub/ui/components/skeleton";
-import { ArrowUpRightIcon, CircleAlertIcon } from "@festhub/ui/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@festhub/ui/components/dropdown-menu";
+import {
+  ArrowUpRightIcon,
+  ChevronDownIcon,
+  CircleAlertIcon,
+  LogOutIcon,
+} from "@festhub/ui/icons";
 import { cn } from "@festhub/ui/lib/utils";
 import { LoadingBlock } from "./status";
 import { UserAvatar } from "./user-avatar";
@@ -14,8 +25,58 @@ import { UserAvatar } from "./user-avatar";
 const navLink =
   "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
 
+// Inlined at build time; ignore values that are not absolute http(s) URLs so
+// the link never resolves relative to this site.
+function configuredEventUrl() {
+  const value = process.env.NEXT_PUBLIC_EVENT_WEB_URL?.trim();
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function UserMenu() {
+  const { user } = useAuthContext();
+  const { pending, signOut } = useSignOut();
+  if (!user) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Open account menu"
+          className="group flex items-center gap-2.5 rounded-full border bg-card py-1 pr-2.5 pl-1 shadow-xs outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-muted"
+        >
+          <UserAvatar name={user.name} imageId={user.displayImageId} />
+          <span className="hidden max-w-40 truncate text-sm font-medium sm:block">
+            {user.name}
+          </span>
+          <ChevronDownIcon
+            aria-hidden
+            className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          disabled={pending}
+          onSelect={() => void signOut()}
+        >
+          <LogOutIcon aria-hidden />
+          {pending ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function Shell({ children }: PropsWithChildren) {
-  const eventWebUrl = process.env.NEXT_PUBLIC_EVENT_WEB_URL;
+  const eventWebUrl = configuredEventUrl();
   const auth = useAuthContext();
   const pathname = usePathname();
   const router = useRouter();
@@ -69,20 +130,7 @@ export function Shell({ children }: PropsWithChildren) {
                 </a>
               )}
             </nav>
-            {auth.user && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2.5 rounded-full border bg-card py-1 pr-3 pl-1 shadow-xs">
-                  <UserAvatar
-                    name={auth.user.name}
-                    imageId={auth.user.displayImageId}
-                  />
-                  <span className="hidden max-w-40 truncate text-sm font-medium sm:block">
-                    {auth.user.name}
-                  </span>
-                </div>
-                <SignOutButton />
-              </div>
-            )}
+            <UserMenu />
           </div>
         </div>
       </header>
