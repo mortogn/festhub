@@ -60,6 +60,25 @@ These are the limitations that we know of, which we couldn't complete in time or
 - NO Email verification.
 - Issue tracking for events.
 
+## Features Status
+
+| Feature                                                     | Status         |
+| ----------------------------------------------------------- | -------------- |
+| Event create, update                                        | ✅ Completed   |
+| Assign Volunteer to events                                  | ✅ Completed   |
+| Create and Assign venue to events                           | ✅ Completed   |
+| Participant register, solo and team                         | ✅ Completed   |
+| One participant can join one team per event                 | ✅ Completed   |
+| Handle schedule conflict gracefully for volunteer and venue | ✅ Completed   |
+| Update safe event to not create schedule conflict           | ✅ Completed   |
+| Email Verification for student and teachers                 | 🚧 In Progress |
+| Self checkin with Event QR                                  | ✅ Completed   |
+| Secured checkin with Student QR and teacher Scan            | ✅ Completed   |
+| Programming contest features                                | ✅ Completed   |
+| Safe code execution environment for competitive programming | ✅ Completed   |
+| Problem Set creation for student skill improvement          | ✅ Completed   |
+| Participant can not be a volunteer check                    | 🚧 In Progress |
+
 ## Run this project locally
 
 As this is complex because of judge0, workers and job queue, we suggest to please use the deployed link to check and grade our project.
