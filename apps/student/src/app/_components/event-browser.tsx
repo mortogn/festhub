@@ -48,8 +48,22 @@ export default function EventBrowser({
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("All");
 
+  const query = search.trim().toLowerCase();
+  const filtered = events
+    .filter(
+      (event) =>
+        event.isActive &&
+        (selectedType === "All" || event.type === selectedType.toLowerCase()) &&
+        [event.title, event.description, event.type, event.venue?.title].some(
+          (value) => value?.toLowerCase().includes(query),
+        ),
+    )
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
+
   const { pastEvents, upcomingEvents, onGoingEvents } = filterEvents({
-    events,
+    events: filtered,
   });
 
   return (
