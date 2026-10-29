@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@festhub/ui/components/dropdown-menu";
 import {
@@ -43,9 +44,10 @@ function configuredEventUrl() {
   }
 }
 
-function UserMenu() {
+function UserMenu({ eventWebUrl }: { eventWebUrl?: string }) {
   const { user } = useAuthContext();
   const { pending, signOut } = useSignOut();
+  const pathname = usePathname();
   if (!user) return null;
   return (
     <DropdownMenu>
@@ -68,6 +70,31 @@ function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <div className="sm:hidden">
+          <DropdownMenuItem
+            asChild
+            className={cn(pathname === "/" && "bg-muted text-foreground")}
+          >
+            <Link href="/">Contests</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            asChild
+            className={cn(
+              pathname.startsWith("/practice") && "bg-muted text-foreground",
+            )}
+          >
+            <Link href="/practice">Practice</Link>
+          </DropdownMenuItem>
+          {eventWebUrl && (
+            <DropdownMenuItem asChild>
+              <a href={eventWebUrl}>
+                Events
+                <ArrowUpRightIcon aria-hidden />
+              </a>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+        </div>
         <DropdownMenuItem
           disabled={pending}
           onSelect={() => void signOut()}
@@ -109,7 +136,10 @@ export function Shell({ children }: PropsWithChildren) {
             />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            <nav aria-label="Primary" className="flex items-center gap-1">
+            <nav
+              aria-label="Primary"
+              className="hidden items-center gap-1 sm:flex"
+            >
               <Link
                 href="/"
                 className={cn(
@@ -136,7 +166,7 @@ export function Shell({ children }: PropsWithChildren) {
                 </a>
               )}
             </nav>
-            <UserMenu />
+            <UserMenu eventWebUrl={eventWebUrl} />
           </div>
         </header>
         </div>
